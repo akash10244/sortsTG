@@ -1,8 +1,9 @@
 /**
  * ImageCarousel.tsx — swipeable image gallery with dot indicators and lightbox.
+ * Uses DriveImage for auth-based fetching instead of public URLs.
  */
 import { useState } from 'react';
-import { driveImageUrl } from '../../services/driveService';
+import { DriveImage } from '../ui/DriveImage';
 import { Lightbox } from '../ui/Lightbox';
 
 interface ImageCarouselProps {
@@ -12,10 +13,7 @@ interface ImageCarouselProps {
 export function ImageCarousel({ fileIds }: ImageCarouselProps) {
   const [current, setCurrent] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-
-  const urls = fileIds.map(id => driveImageUrl(id, 's800'));
-  const lightboxUrls = fileIds.map(id => driveImageUrl(id, 's2000'));
-  const count = urls.length;
+  const count = fileIds.length;
 
   if (count === 0) {
     return (
@@ -31,19 +29,18 @@ export function ImageCarousel({ fileIds }: ImageCarouselProps) {
   return (
     <>
       <div className="carousel">
-        <img
-          className="carousel__img"
-          src={urls[current]}
+        <DriveImage
+          fileId={fileIds[current]}
           alt={`Photo ${current + 1}`}
+          className="carousel__img"
           onClick={() => setLightboxOpen(true)}
-          loading="lazy"
         />
         {count > 1 && (
           <>
             <button className="carousel__nav carousel__nav--prev" onClick={e => { e.stopPropagation(); prev(); }} aria-label="Previous">‹</button>
             <button className="carousel__nav carousel__nav--next" onClick={e => { e.stopPropagation(); next(); }} aria-label="Next">›</button>
             <div className="carousel__dots">
-              {urls.map((_, i) => (
+              {fileIds.map((_, i) => (
                 <button
                   key={i}
                   className={`carousel__dot ${i === current ? 'carousel__dot--active' : ''}`}
@@ -56,7 +53,7 @@ export function ImageCarousel({ fileIds }: ImageCarouselProps) {
         )}
       </div>
       {lightboxOpen && (
-        <Lightbox images={lightboxUrls} startIndex={current} onClose={() => setLightboxOpen(false)} />
+        <Lightbox fileIds={fileIds} startIndex={current} onClose={() => setLightboxOpen(false)} />
       )}
     </>
   );

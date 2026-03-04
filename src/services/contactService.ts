@@ -29,8 +29,16 @@ export async function loadData(appFolderId: string): Promise<DriveDataFile> {
   if (!data) return EMPTY_DATA;
 
   // Ensure backwards-compat: fill in any missing config keys
+  const contacts = (data.contacts ?? []).map((c: any) => {
+    // Migrate old price:number → prices:PriceEntry[]
+    if (!c.prices && typeof c.price === 'number') {
+      return { ...c, prices: [{ amount: c.price, duration: 1, durationUnit: 'shots' }] };
+    }
+    return c;
+  });
+
   return {
-    contacts: data.contacts ?? [],
+    contacts,
     config: {
       ageTypes: data.config?.ageTypes ?? DEFAULT_AGE_TYPES,
       tierBoundaries: {

@@ -8,9 +8,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { loadData, saveData } from '../services/contactService';
 import { deleteFile, uploadFile, makeFilePublic } from '../services/driveService';
-import { deriveTier, recomputeTiers } from '../utils/tierUtils';
+import { deriveTier, recomputeTiers, minPrice } from '../utils/tierUtils';
 import { generateId } from '../utils/uuid';
-import type { Contact, AppConfig, DriveDataFile, TierBoundaries } from '../types';
+import type { Contact, AppConfig, DriveDataFile } from '../types';
 
 interface UseContactsReturn {
   contacts: Contact[];
@@ -81,7 +81,7 @@ export function useContacts(appFolderId: string | null): UseContactsReturn {
       ...draft,
       id: generateId(),
       imageFileIds,
-      priceType: deriveTier(draft.price, data.config.tierBoundaries),
+      priceType: deriveTier(minPrice(draft.prices), data.config.tierBoundaries),
       createdAt: now,
       updatedAt: now,
     };
@@ -112,7 +112,7 @@ export function useContacts(appFolderId: string | null): UseContactsReturn {
       ...existing,
       ...draft,
       imageFileIds: [...keptIds, ...newIds],
-      priceType: deriveTier(draft.price, data.config.tierBoundaries),
+      priceType: deriveTier(minPrice(draft.prices), data.config.tierBoundaries),
       updatedAt: new Date().toISOString(),
     };
 

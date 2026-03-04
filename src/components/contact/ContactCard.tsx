@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import type { Contact } from '../../types';
-import { formatPrice } from '../../utils/tierUtils';
+import { formatPrices } from '../../utils/tierUtils';
 import { ImageCarousel } from './ImageCarousel';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -40,10 +40,10 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
       </div>
 
       <div className="card__body">
-        {/* Name + age (no ageType) */}
+        {/* Name + age + ageType */}
         <div className="card__name-row">
           <span className="card__name">{contact.name}</span>
-          <span className="card__age">{contact.age}</span>
+          <span className="card__age">{contact.age} · {contact.ageType}</span>
         </div>
 
         {/* Location */}
@@ -54,10 +54,10 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
           </div>
         )}
 
-        {/* Price only — no tier badge */}
+        {/* All price entries */}
         <div className="card__meta">
           <span className="card__meta-icon">💰</span>
-          <span className="card__price">{formatPrice(contact.price)}</span>
+          <span className="card__price">{formatPrices(contact.prices)}</span>
         </div>
 
         {/* Contact deep-link */}

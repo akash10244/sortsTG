@@ -3,8 +3,8 @@
  * Files are not uploaded immediately; they are queued and the parent component
  * calls uploadImages() from useContacts when saving the contact form.
  */
-import { useState, useCallback } from 'react';
-import { driveImageUrl } from '../../services/driveService';
+import { useCallback } from 'react';
+import { DriveImage, evictDriveImageCache } from '../ui/DriveImage';
 import { Spinner } from '../ui/Spinner';
 
 interface PendingImage {
@@ -51,12 +51,12 @@ export function ImageUploader({
     <div className="image-uploader">
       {/* Existing images */}
       {existingFileIds.map(id => (
-        <div key={id} className="image-uploader__thumb">
-          <img src={driveImageUrl(id)} alt="Existing" />
+              <div key={id} className="image-uploader__thumb">
+          <DriveImage fileId={id} alt="Existing" className="image-uploader__thumb-img" />
           <button
             className="image-uploader__remove"
             type="button"
-            onClick={() => onRemoveExisting(id)}
+            onClick={() => { evictDriveImageCache(id); onRemoveExisting(id); }}
             aria-label="Remove image"
           >
             ✕

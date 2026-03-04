@@ -585,7 +585,7 @@ input:focus, textarea:focus, select:focus {
 /* ── Card grid ─────────────────────────────────────────────────────────────── */
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 250px));
   gap: var(--sp-3);
 }
 
@@ -797,6 +797,69 @@ input:focus, textarea:focus, select:focus {
   padding-top: var(--sp-4);
   border-top: 1px solid var(--border);
 }
+
+/* Price entry row */
+.form-label-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+.tier-inline-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px var(--sp-2);
+  border-radius: var(--radius-full);
+}
+.tier-inline-badge--budget   { background: rgba(6,182,212,0.15);  color: var(--tier-budget);   }
+.tier-inline-badge--midrange { background: rgba(34,197,94,0.15);  color: var(--tier-midrange); }
+.tier-inline-badge--premium  { background: rgba(245,158,11,0.15); color: var(--tier-premium);  }
+.tier-inline-badge--models   { background: rgba(236,72,153,0.15); color: var(--tier-models);   }
+
+.price-entry {
+  display: grid;
+  grid-template-columns: 1fr 80px auto auto;
+  gap: var(--sp-3);
+  align-items: end;
+  padding: var(--sp-3);
+  background: var(--bg-elevated);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.price-entry__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-bottom: 2px;
+}
+.price-entry__preview {
+  font-size: 0.78rem;
+  color: var(--accent-light);
+  white-space: nowrap;
+}
+.price-entry__remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  padding: var(--sp-1);
+  border-radius: var(--radius-sm);
+  transition: color var(--t-fast), background var(--t-fast);
+}
+.price-entry__remove:hover { color: var(--red); background: var(--red-bg); }
+
+.price-add-btn {
+  align-self: flex-start;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  padding: var(--sp-2) var(--sp-4);
+  transition: all var(--t-fast);
+  margin-top: var(--sp-1);
+}
+.price-add-btn:hover { border-color: var(--accent-mid); color: var(--accent-light); }
 
 /* ── Image uploader ────────────────────────────────────────────────────────── */
 .image-uploader {

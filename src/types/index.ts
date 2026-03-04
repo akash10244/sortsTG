@@ -21,6 +21,14 @@ export interface AuthState {
 
 export type PriceType = 'budget' | 'midrange' | 'premium' | 'models';
 export type ContactType = 'phone' | 'telegram';
+export type DurationUnit = 'shots' | 'hrs';
+
+/** A single price+duration entry, e.g. ₹13,000 / 2 shots */
+export interface PriceEntry {
+  amount: number;       // in INR
+  duration: number;     // e.g. 2
+  durationUnit: DurationUnit; // 'shots' | 'hrs'
+}
 
 export interface Contact {
   id: string;
@@ -34,8 +42,9 @@ export interface Contact {
   /** Google Drive file IDs for images stored in the images subfolder */
   imageFileIds: string[];
   isActive: boolean;
-  price: number;
-  /** Auto-derived from price + tier boundaries on every save */
+  /** One or more price+duration entries. Tier derived from min(prices.amount). */
+  prices: PriceEntry[];
+  /** Auto-derived from min(prices.amount) + tier boundaries on every save */
   priceType: PriceType;
   createdAt: string;
   updatedAt: string;
@@ -91,4 +100,4 @@ export const DEFAULT_TIER_BOUNDARIES: TierBoundaries = {
   modelsMin: 18000,
 };
 
-export const DEFAULT_AGE_TYPES = ['Young', 'Mid', 'Mature'];
+export const DEFAULT_AGE_TYPES = ['College Chick', 'Young', 'MILF', 'Old'];

@@ -1,12 +1,10 @@
 /**
  * ContactModal.tsx — full add/edit contact form.
- *
- * Holds all draft state internally. Only commits to parent on Save.
+ * Price is now a list of PriceEntry items (amount + duration + unit).
  */
 import { useState, useEffect } from 'react';
-import type { Contact, AppConfig, ContactType } from '../../types';
-import { ALL_TIERS, TIER_LABELS } from '../../types';
-import { deriveTier, formatPrice } from '../../utils/tierUtils';
+import type { Contact, AppConfig, ContactType, PriceEntry, PriceType } from '../../types';
+import { TIER_LABELS } from '../../types';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { ImageUploader, type PendingImage } from './ImageUploader';
@@ -14,7 +12,6 @@ import { ImageUploader, type PendingImage } from './ImageUploader';
 interface ContactModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** null = add mode, Contact = edit mode */
   contact: Contact | null;
   config: AppConfig;
   imagesFolderId: string;
@@ -26,7 +23,7 @@ interface ContactModalProps {
   ) => Promise<void>;
 }
 
-interface ContactDraftFields {
+export interface ContactDraftFields {
   name: string;
   age: number;
   ageType: string;
@@ -34,9 +31,12 @@ interface ContactDraftFields {
   contactValue: string;
   location: string;
   reviewText: string;
-  price: number;
+  prices: PriceEntry[];
+  priceType: PriceType;  // set manually by user
   isActive: boolean;
 }
+
+const EMPTY_PRICE_ENTRY: PriceEntry = { amount: 0, duration: 1, durationUnit: 'shots' };
 
 const EMPTY_DRAFT: ContactDraftFields = {
   name: '',
@@ -46,7 +46,8 @@ const EMPTY_DRAFT: ContactDraftFields = {
   contactValue: '',
   location: '',
   reviewText: '',
-  price: 0,
+  prices: [{ ...EMPTY_PRICE_ENTRY }],
+  priceType: 'budget',
   isActive: true,
 };
 
@@ -59,7 +60,8 @@ function draftFromContact(c: Contact): ContactDraftFields {
     contactValue: c.contactValue,
     location: c.location,
     reviewText: c.reviewText,
-    price: c.price,
+    prices: c.prices.length ? c.prices : [{ ...EMPTY_PRICE_ENTRY }],
+    priceType: c.priceType,
     isActive: c.isActive,
   };
 }
@@ -75,13 +77,15 @@ export function ContactModal({
   const [draft, setDraft] = useState<ContactDraftFields>(EMPTY_DRAFT);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [removedFileIds, setRemovedFileIds] = useState<string[]>([]);
-  const [errors, setErrors] = useState<Partial<Record<keyof ContactDraftFields, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
 
-  // Reset draft when modal opens
   useEffect(() => {
     if (isOpen) {
-      setDraft(contact ? draftFromContact(contact) : { ...EMPTY_DRAFT, ageType: config.ageTypes[0] ?? '' });
+      setDraft(contact
+        ? draftFromContact(contact)
+        : { ...EMPTY_DRAFT, ageType: config.ageTypes[0] ?? '', prices: [{ ...EMPTY_PRICE_ENTRY }], priceType: 'budget' }
+      );
       setPendingImages([]);
       setRemovedFileIds([]);
       setErrors({});
@@ -91,12 +95,30 @@ export function ContactModal({
   const set = <K extends keyof ContactDraftFields>(key: K, value: ContactDraftFields[K]) =>
     setDraft(d => ({ ...d, [key]: value }));
 
+  // ── Price entry helpers ──────────────────────────────────────────────────
+  const updatePrice = (idx: number, patch: Partial<PriceEntry>) =>
+    setDraft(d => ({
+      ...d,
+      prices: d.prices.map((p, i) => (i === idx ? { ...p, ...patch } : p)),
+    }));
+
+  const addPriceEntry = () =>
+    setDraft(d => ({ ...d, prices: [...d.prices, { ...EMPTY_PRICE_ENTRY }] }));
+
+  const removePriceEntry = (idx: number) =>
+    setDraft(d => ({ ...d, prices: d.prices.filter((_, i) => i !== idx) }));
+
+  // ── Validation ───────────────────────────────────────────────────────────
   const validate = () => {
     const e: typeof errors = {};
     if (!draft.name.trim()) e.name = 'Name is required';
     if (!draft.age || draft.age < 18) e.age = 'Age must be ≥ 18';
-    if (!draft.price || draft.price < 0) e.price = 'Price is required';
     if (!draft.contactValue.trim()) e.contactValue = 'Contact is required';
+    if (!draft.prices.length) e.prices = 'Add at least one price entry';
+    draft.prices.forEach((p, i) => {
+      if (!p.amount || p.amount <= 0) e[`price_${i}`] = 'Enter a valid amount';
+      if (!p.duration || p.duration <= 0) e[`duration_${i}`] = 'Enter a valid duration';
+    });
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -114,7 +136,6 @@ export function ContactModal({
     }
   };
 
-  const liveTier = deriveTier(draft.price, config.tierBoundaries);
 
   return (
     <Modal
@@ -143,15 +164,13 @@ export function ContactModal({
             <input id="cf-name" className={`form-input ${errors.name ? 'form-input--error' : ''}`} value={draft.name} onChange={e => set('name', e.target.value)} placeholder="Full name" />
             {errors.name && <p className="form-error">{errors.name}</p>}
           </div>
-
           {/* Age */}
           <div className="form-group form-group--sm">
             <label className="form-label" htmlFor="cf-age">Age *</label>
             <input id="cf-age" type="number" min={18} className={`form-input ${errors.age ? 'form-input--error' : ''}`} value={draft.age} onChange={e => set('age', Number(e.target.value))} />
             {errors.age && <p className="form-error">{errors.age}</p>}
           </div>
-
-          {/* Age type */}
+          {/* Age Type */}
           <div className="form-group form-group--sm">
             <label className="form-label" htmlFor="cf-agetype">Age Type</label>
             <select id="cf-agetype" className="form-input" value={draft.ageType} onChange={e => set('ageType', e.target.value)}>
@@ -169,7 +188,6 @@ export function ContactModal({
               <button type="button" className={`form-toggle-btn ${draft.contactType === 'telegram' ? 'form-toggle-btn--active' : ''}`} onClick={() => set('contactType', 'telegram')}>✈️ Telegram</button>
             </div>
           </div>
-
           {/* Contact value */}
           <div className="form-group">
             <label className="form-label" htmlFor="cf-contact">
@@ -186,21 +204,85 @@ export function ContactModal({
           </div>
         </div>
 
-        <div className="form-row">
-          {/* Price */}
-          <div className="form-group form-group--sm">
-            <label className="form-label" htmlFor="cf-price">Price (₹) *</label>
-            <input id="cf-price" type="number" min={0} className={`form-input ${errors.price ? 'form-input--error' : ''}`} value={draft.price || ''} onChange={e => set('price', Number(e.target.value))} placeholder="0" />
-            {errors.price && <p className="form-error">{errors.price}</p>}
-            {draft.price > 0 && (
-              <p className="form-hint">Tier: <strong>{TIER_LABELS[liveTier]}</strong> · {formatPrice(draft.price)}</p>
-            )}
+        {/* Location */}
+        <div className="form-group">
+          <label className="form-label" htmlFor="cf-location">Location</label>
+          <input id="cf-location" className="form-input" value={draft.location} onChange={e => set('location', e.target.value)} placeholder="City / area" />
+        </div>
+
+        {/* ── Price entries ──────────────────────────────────────────────── */}
+        <div className="form-section">
+          <div className="form-label-row">
+            <label className="form-label">Pricing *</label>
           </div>
 
-          {/* Location */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="cf-location">Location</label>
-            <input id="cf-location" className="form-input" value={draft.location} onChange={e => set('location', e.target.value)} placeholder="City / area" />
+          {errors.prices && <p className="form-error">{errors.prices}</p>}
+
+          {draft.prices.map((entry, idx) => (
+            <div key={idx} className="price-entry">
+              <div className="form-group form-group--sm">
+                <label className="form-label" htmlFor={`cf-amount-${idx}`}>₹ Amount</label>
+                <input
+                  id={`cf-amount-${idx}`}
+                  type="number"
+                  min={0}
+                  className={`form-input ${errors[`price_${idx}`] ? 'form-input--error' : ''}`}
+                  value={entry.amount || ''}
+                  onChange={e => updatePrice(idx, { amount: Number(e.target.value) })}
+                  placeholder="13000"
+                />
+                {errors[`price_${idx}`] && <p className="form-error">{errors[`price_${idx}`]}</p>}
+              </div>
+
+              <div className="form-group form-group--sm">
+                <label className="form-label" htmlFor={`cf-dur-${idx}`}>Duration</label>
+                <input
+                  id={`cf-dur-${idx}`}
+                  type="number"
+                  min={1}
+                  className={`form-input ${errors[`duration_${idx}`] ? 'form-input--error' : ''}`}
+                  value={entry.duration || ''}
+                  onChange={e => updatePrice(idx, { duration: Number(e.target.value) })}
+                  placeholder="2"
+                />
+                {errors[`duration_${idx}`] && <p className="form-error">{errors[`duration_${idx}`]}</p>}
+              </div>
+
+              <div className="form-group form-group--sm">
+                <label className="form-label">Unit</label>
+                <div className="form-toggle-group">
+                  <button type="button" className={`form-toggle-btn ${entry.durationUnit === 'shots' ? 'form-toggle-btn--active' : ''}`} onClick={() => updatePrice(idx, { durationUnit: 'shots' })}>shots</button>
+                  <button type="button" className={`form-toggle-btn ${entry.durationUnit === 'hrs' ? 'form-toggle-btn--active' : ''}`} onClick={() => updatePrice(idx, { durationUnit: 'hrs' })}>hrs</button>
+                </div>
+              </div>
+
+              <div className="price-entry__actions">
+                {draft.prices.length > 1 && (
+                  <button type="button" className="price-entry__remove" onClick={() => removePriceEntry(idx)} aria-label="Remove entry">✕</button>
+                )}
+              </div>
+            </div>
+          ))}
+
+          <button type="button" className="price-add-btn" onClick={addPriceEntry}>
+            ＋ Add another price
+          </button>
+        </div>
+
+        {/* Tier — manual selection */}
+        <div className="form-group">
+          <label className="form-label">Tier</label>
+          <div className="tier-chips tier-chips--select">
+            {(['budget', 'midrange', 'premium', 'models'] as PriceType[]).map(t => (
+              <button
+                key={t}
+                type="button"
+                className={`tier-chip tier-chip--${t} ${draft.priceType === t ? 'tier-chip--active' : ''}`}
+                onClick={() => set('priceType', t)}
+              >
+                {TIER_LABELS[t]}
+              </button>
+            ))}
           </div>
         </div>
 

@@ -145,14 +145,27 @@ export async function uploadFile(file: File, parentFolderId: string): Promise<Up
 
   if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
   const data = await res.json();
+
+  // Give Drive a moment to finish indexing before the permissions call
+  await sleep(400);
+
   return { id: data.id as string, webViewLink: data.webViewLink as string };
+}
+
+/** Simple promise-based sleep */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
  * Make a Drive file publicly readable so it can be embedded in <img> tags
  * without OAuth headers.
+ *
+ * Retries up to 4 times with exponential backoff because Drive sometimes needs
+ * a few seconds to finish indexing a newly-uploaded file before the permissions
+ * endpoint accepts the request.
  */
-export async function makeFilePublic(fileId: string): Promise<void> {
+export async function makeFilePublic(fileId: string, attempt = 1): Promise<void> {
   const token = await getValidAccessToken();
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,
@@ -165,7 +178,19 @@ export async function makeFilePublic(fileId: string): Promise<void> {
       body: JSON.stringify({ role: 'reader', type: 'anyone' }),
     }
   );
-  if (!res.ok) throw new Error(`makeFilePublic failed: ${res.statusText}`);
+
+  if (res.ok) return;
+
+  // Retry on server errors (5xx) or 404 (file not yet indexed)
+  const retryable = res.status === 404 || res.status >= 500;
+  if (retryable && attempt < 5) {
+    const delay = 500 * Math.pow(2, attempt - 1); // 500, 1000, 2000, 4000 ms
+    console.warn(`makeFilePublic: attempt ${attempt} failed (${res.status}), retrying in ${delay}ms…`);
+    await sleep(delay);
+    return makeFilePublic(fileId, attempt + 1);
+  }
+
+  throw new Error(`makeFilePublic failed after ${attempt} attempt(s): ${res.status} ${res.statusText}`);
 }
 
 /**
