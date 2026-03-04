@@ -60,13 +60,13 @@ export function useContacts(appFolderId: string | null): UseContactsReturn {
 
   // ── Image upload helper ────────────────────────────────────────────────────
   const uploadImages = useCallback(async (files: File[], imagesFolderId: string): Promise<string[]> => {
-    const ids: string[] = [];
-    for (const file of files) {
-      const result = await uploadFile(file, imagesFolderId);
-      await makeFilePublic(result.id);
-      ids.push(result.id);
-    }
-    return ids;
+    return Promise.all(
+      files.map(async (file) => {
+        const result = await uploadFile(file, imagesFolderId);
+        await makeFilePublic(result.id);
+        return result.id;
+      })
+    );
   }, []);
 
   // ── addContact ─────────────────────────────────────────────────────────────

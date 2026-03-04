@@ -220,6 +220,8 @@ export function driveImageUrl(fileId: string, size: 's800' | 's1200' | 's2000' =
 
 // ─── JSON data ────────────────────────────────────────────────────────────────
 
+const _fileIdCache = new Map<string, string>();
+
 /**
  * Save (create or overwrite) a JSON file in the app folder.
  * Returns the file ID.
@@ -228,22 +230,30 @@ export async function saveJson<T>(filename: string, data: T, parentFolderId: str
   const token = await getValidAccessToken();
   const jsonBlob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
 
-  // Check if a file with this name already exists
-  gapi.client.setToken({ access_token: token });
-  const searchRes = await (gapi.client as any).drive.files.list({
-    q: `name='${filename}' and '${parentFolderId}' in parents and trashed=false`,
-    fields: 'files(id)',
-  });
-  const existing: any[] = searchRes.result.files ?? [];
+  const cacheKey = `${parentFolderId}/${filename}`;
+  let existingId = _fileIdCache.get(cacheKey);
 
-  let url =
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id';
+  if (!existingId) {
+    // Check if a file with this name already exists
+    gapi.client.setToken({ access_token: token });
+    const searchRes = await (gapi.client as any).drive.files.list({
+      q: `name='${filename}' and '${parentFolderId}' in parents and trashed=false`,
+      fields: 'files(id)',
+    });
+    const existing: any[] = searchRes.result.files ?? [];
+    if (existing.length > 0) {
+      existingId = existing[0].id as string;
+      _fileIdCache.set(cacheKey, existingId);
+    }
+  }
+
+  let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id';
   let method = 'POST';
   const metadata: Record<string, any> = { name: filename, mimeType: 'application/json' };
 
-  if (existing.length > 0) {
+  if (existingId) {
     // PATCH to update existing file (no parents field on update)
-    url = `https://www.googleapis.com/upload/drive/v3/files/${existing[0].id}?uploadType=multipart&fields=id`;
+    url = `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart&fields=id`;
     method = 'PATCH';
   } else {
     metadata.parents = [parentFolderId];
@@ -261,7 +271,9 @@ export async function saveJson<T>(filename: string, data: T, parentFolderId: str
 
   if (!res.ok) throw new Error(`Save failed: ${res.statusText}`);
   const result = await res.json();
-  return result.id as string;
+  const fileId = result.id as string;
+  _fileIdCache.set(cacheKey, fileId);
+  return fileId;
 }
 
 /**
@@ -277,6 +289,9 @@ export async function loadJson<T>(filename: string, parentFolderId: string): Pro
   });
   const existing: any[] = searchRes.result.files ?? [];
   if (existing.length === 0) return null;
+  const fileId = existing[0].id;
+
+  _fileIdCache.set(`${parentFolderId}/${filename}`, fileId);
 
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files/${existing[0].id}?alt=media`,
