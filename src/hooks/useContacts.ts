@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { loadData, saveData } from '../services/contactService';
 import { deleteFile, uploadFile, makeFilePublic } from '../services/driveService';
-import { deriveTier, recomputeTiers, minPrice } from '../utils/tierUtils';
+import { recomputeTiers } from '../utils/tierUtils';
 import { generateId } from '../utils/uuid';
 import type { Contact, AppConfig, DriveDataFile } from '../types';
 
@@ -25,7 +25,7 @@ interface UseContactsReturn {
 }
 
 /** The raw form data before IDs / timestamps are generated */
-export type ContactDraft = Omit<Contact, 'id' | 'priceType' | 'imageFileIds' | 'createdAt' | 'updatedAt'>;
+export type ContactDraft = Omit<Contact, 'id' | 'imageFileIds' | 'createdAt' | 'updatedAt'>;
 
 export function useContacts(appFolderId: string | null): UseContactsReturn {
   const [data, setData] = useState<DriveDataFile>({ contacts: [], config: { ageTypes: [], tierBoundaries: { midrangeMin: 7000, premiumMin: 13000, modelsMin: 18000 } } });
@@ -81,7 +81,7 @@ export function useContacts(appFolderId: string | null): UseContactsReturn {
       ...draft,
       id: generateId(),
       imageFileIds,
-      priceType: deriveTier(minPrice(draft.prices), data.config.tierBoundaries),
+      priceType: draft.priceType,  // user-selected in modal
       createdAt: now,
       updatedAt: now,
     };
@@ -112,7 +112,7 @@ export function useContacts(appFolderId: string | null): UseContactsReturn {
       ...existing,
       ...draft,
       imageFileIds: [...keptIds, ...newIds],
-      priceType: deriveTier(minPrice(draft.prices), data.config.tierBoundaries),
+      priceType: draft.priceType,  // user-selected in modal
       updatedAt: new Date().toISOString(),
     };
 

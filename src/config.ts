@@ -6,8 +6,9 @@ export const GOOGLE_CLIENT_ID =
 /** Full Drive read/write scope */
 export const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive';
 
-/** The local Express auth server */
-export const AUTH_SERVER_URL = 'http://localhost:3001';
+/** Auth server URL — set VITE_AUTH_SERVER_URL in Vercel env vars */
+export const AUTH_SERVER_URL =
+  import.meta.env.VITE_AUTH_SERVER_URL ?? 'http://localhost:3001';
 
 /** Folder path inside Google Drive where all app data lives */
 export const DRIVE_FOLDER_PATH = 'projects/sortsTG';
