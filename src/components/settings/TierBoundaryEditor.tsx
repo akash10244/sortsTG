@@ -2,7 +2,7 @@
  * TierBoundaryEditor.tsx — edit the three price thresholds with live preview.
  */
 import type { TierBoundaries } from '../../types';
-import { formatPrice, tierRangeLabel } from '../../utils/tierUtils';
+import { tierRangeLabel } from '../../utils/tierUtils';
 import { ALL_TIERS, TIER_LABELS } from '../../types';
 
 interface TierBoundaryEditorProps {

@@ -1,14 +1,20 @@
 // ─── Application-level constants ────────────────────────────────────────────
 
 export const GOOGLE_CLIENT_ID =
-  '264697566403-6red5l11d38rcon95bg5une162aplu58.apps.googleusercontent.com';
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
 
 /** Full Drive read/write scope */
 export const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive';
 
-/** Auth server URL — set VITE_AUTH_SERVER_URL in Vercel env vars */
 export const AUTH_SERVER_URL =
   import.meta.env.VITE_AUTH_SERVER_URL ?? 'http://localhost:3001';
+
+/**
+ * Google OAuth client secret — set VITE_GOOGLE_CLIENT_SECRET in Vercel env vars.
+ * Yes, it ends up in the JS bundle. Fine for a personal app.
+ */
+export const GOOGLE_CLIENT_SECRET =
+  import.meta.env.VITE_GOOGLE_CLIENT_SECRET ?? '';
 
 /** Folder path inside Google Drive where all app data lives */
 export const DRIVE_FOLDER_PATH = 'projects/sortsTG';

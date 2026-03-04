@@ -1,21 +1,20 @@
 /**
  * authService.ts
  *
- * Handles all token lifecycle management:
- *   - Exchanging an auth code for access + refresh tokens (via local server)
- *   - Refreshing an expired access token (via local server)
- *   - Persisting the refresh token in localStorage
- *   - Checking token expiry
+ * Calls Google's token endpoint directly — no backend needed.
+ * GOOGLE_CLIENT_SECRET lives in VITE_GOOGLE_CLIENT_SECRET (Vercel env var).
  */
 
-import { AUTH_SERVER_URL, STORAGE_KEYS } from '../config';
+import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, STORAGE_KEYS } from '../config';
 import type { TokenSet } from '../types';
 
-// In-memory access token (never persisted to localStorage for security)
+const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
+
+// In-memory access token (never persisted to localStorage)
 let _accessToken: string | null = null;
 let _expiresAt: number | null = null;
 
-// ─── Storage helpers ─────────────────────────────────────────────────────────
+// ─── Storage helpers ──────────────────────────────────────────────────────────
 
 function saveRefreshToken(token: string): void {
   localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, token);
@@ -25,7 +24,7 @@ function loadRefreshToken(): string | null {
   return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
 }
 
-function clearStoredTokens(): void {
+export function clearStoredTokens(): void {
   localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
   localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN_EXPIRES);
   _accessToken = null;
@@ -36,65 +35,73 @@ function clearStoredTokens(): void {
 
 function isAccessTokenValid(): boolean {
   if (!_accessToken || !_expiresAt) return false;
-  // Consider expired 60 seconds before actual expiry to avoid edge cases
-  return Date.now() < _expiresAt - 60_000;
+  return Date.now() < _expiresAt - 60_000; // 1-min buffer
 }
 
 function storeTokenSet(tokens: TokenSet): void {
   _accessToken = tokens.accessToken;
   _expiresAt = tokens.expiresAt;
-  if (tokens.refreshToken) {
-    saveRefreshToken(tokens.refreshToken);
-  }
+  if (tokens.refreshToken) saveRefreshToken(tokens.refreshToken);
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * Exchange a Google OAuth authorization code for access + refresh tokens.
- * Called once after the user completes the sign-in popup.
+ * Calls Google's token endpoint directly (no backend).
  */
 export async function exchangeCode(code: string): Promise<TokenSet> {
-  const res = await fetch(`${AUTH_SERVER_URL}/auth/exchange`, {
+  const res = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code }),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri: 'postmessage',
+      grant_type: 'authorization_code',
+    }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Code exchange failed');
+  if (data.error) throw new Error(data.error_description ?? data.error);
 
   const tokens: TokenSet = {
-    accessToken: data.accessToken,
-    refreshToken: data.refreshToken ?? null,
-    expiresAt: Date.now() + data.expiresIn * 1000,
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token ?? null,
+    expiresAt: Date.now() + data.expires_in * 1000,
   };
   storeTokenSet(tokens);
   return tokens;
 }
 
 /**
- * Use the stored refresh token to silently obtain a new access token.
- * Throws if there is no stored refresh token.
+ * Use the stored refresh token to silently get a new access token.
+ * Calls Google's token endpoint directly (no backend).
  */
 export async function refreshAccessToken(): Promise<TokenSet> {
   const refreshToken = loadRefreshToken();
-  if (!refreshToken) throw new Error('No refresh token stored — user must sign in');
+  if (!refreshToken) throw new Error('No refresh token — user must sign in');
 
-  const res = await fetch(`${AUTH_SERVER_URL}/auth/refresh`, {
+  const res = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      refresh_token: refreshToken,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      grant_type: 'refresh_token',
+    }),
   });
   const data = await res.json();
-  if (!res.ok) {
+  if (data.error) {
     clearStoredTokens();
-    throw new Error(data.error ?? 'Token refresh failed');
+    throw new Error(data.error_description ?? data.error);
   }
 
   const tokens: TokenSet = {
-    accessToken: data.accessToken,
-    refreshToken: null, // refresh tokens don't rotate here
-    expiresAt: Date.now() + data.expiresIn * 1000,
+    accessToken: data.access_token,
+    refreshToken: null, // Google doesn't rotate refresh tokens here
+    expiresAt: Date.now() + data.expires_in * 1000,
   };
   storeTokenSet(tokens);
   return tokens;
@@ -102,7 +109,6 @@ export async function refreshAccessToken(): Promise<TokenSet> {
 
 /**
  * Returns a valid access token, refreshing silently if necessary.
- * This is the primary entry-point for services that need an access token.
  */
 export async function getValidAccessToken(): Promise<string> {
   if (isAccessTokenValid()) return _accessToken!;
@@ -110,16 +116,12 @@ export async function getValidAccessToken(): Promise<string> {
   return tokens.accessToken;
 }
 
-/**
- * True if we have a refresh token stored (i.e. user has previously signed in).
- */
+/** True if user has previously signed in (refresh token in localStorage). */
 export function hasStoredSession(): boolean {
   return !!loadRefreshToken();
 }
 
-/**
- * Sign out — clears all stored tokens.
- */
+/** Sign out — clears all stored tokens. */
 export function signOut(): void {
   clearStoredTokens();
 }
