@@ -28,21 +28,39 @@ export function Lightbox({ fileIds, startIndex, onClose }: LightboxProps) {
 
   return createPortal(
     <div className="lightbox" onClick={onClose} aria-modal="true" role="dialog">
-      <button className="lightbox__close" onClick={onClose} aria-label="Close">✕</button>
-      {count > 1 && (
-        <>
-          <button className="lightbox__nav lightbox__nav--prev" onClick={e => { e.stopPropagation(); setIndex(i => (i - 1 + count) % count); }} aria-label="Previous">‹</button>
-          <button className="lightbox__nav lightbox__nav--next" onClick={e => { e.stopPropagation(); setIndex(i => (i + 1) % count); }} aria-label="Next">›</button>
-        </>
-      )}
-      <DriveImage
-        fileId={fileIds[index]}
-        alt="Full size"
-        className="lightbox__img"
-      />
-      {count > 1 && (
-        <div className="lightbox__counter">{index + 1} / {count}</div>
-      )}
+      {/* Header: Counter (center) + Close (right) */}
+      <div className="lightbox__header" onClick={(e) => e.stopPropagation()}>
+        {count > 1 ? (
+          <div className="lightbox__counter">
+            {index + 1} / {count}
+          </div>
+        ) : <div />}
+        <button className="lightbox__close" onClick={onClose} aria-label="Close">✕</button>
+      </div>
+
+      <div className="lightbox__content">
+        {count > 1 && (
+          <div
+            className="lightbox__nav-zone lightbox__nav-zone--left"
+            onClick={(e) => { e.stopPropagation(); setIndex(i => (i - 1 + count) % count); }}
+            aria-label="Previous image"
+          />
+        )}
+
+        <DriveImage
+          fileId={fileIds[index]}
+          alt={`Image ${index + 1} of ${count}`}
+          className="lightbox__img"
+        />
+
+        {count > 1 && (
+          <div
+            className="lightbox__nav-zone lightbox__nav-zone--right"
+            onClick={(e) => { e.stopPropagation(); setIndex(i => (i + 1) % count); }}
+            aria-label="Next image"
+          />
+        )}
+      </div>
     </div>,
     document.body
   );

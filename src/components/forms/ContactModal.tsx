@@ -14,7 +14,7 @@ interface ContactModalProps {
   onClose: () => void;
   contact: Contact | null;
   config: AppConfig;
-  imagesFolderId: string;
+  mode?: 'add' | 'edit' | 'view';
   onSave: (
     draft: ContactDraftFields,
     newFiles: File[],
@@ -66,17 +66,11 @@ function draftFromContact(c: Contact): ContactDraftFields {
   };
 }
 
-export function ContactModal({
-  isOpen,
-  onClose,
-  contact,
-  config,
-  imagesFolderId: _imagesFolderId,
-  onSave,
-}: ContactModalProps) {
+export function ContactModal({ isOpen, onClose, contact, config, mode = 'edit', onSave }: ContactModalProps) {
   const [draft, setDraft] = useState<ContactDraftFields>(EMPTY_DRAFT);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [removedFileIds, setRemovedFileIds] = useState<string[]>([]);
+  const isView = mode === 'view';
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
 
@@ -141,7 +135,7 @@ export function ContactModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={contact ? 'Edit Contact' : 'Add Contact'}
+      title={isView ? 'Contact Details' : contact ? 'Edit Contact' : 'Add Contact'}
       width="lg"
     >
       <div className="contact-form">
@@ -154,6 +148,7 @@ export function ContactModal({
             pendingFiles={pendingImages}
             onPendingChange={setPendingImages}
             uploading={saving}
+            readOnly={isView}
           />
         </div>
 
@@ -161,19 +156,19 @@ export function ContactModal({
           {/* Name */}
           <div className="form-group">
             <label className="form-label" htmlFor="cf-name">Name *</label>
-            <input id="cf-name" className={`form-input ${errors.name ? 'form-input--error' : ''}`} value={draft.name} onChange={e => set('name', e.target.value)} placeholder="Full name" />
+            <input id="cf-name" className={`form-input ${errors.name ? 'form-input--error' : ''}`} value={draft.name} onChange={e => set('name', e.target.value)} placeholder="Full name" disabled={isView} />
             {errors.name && <p className="form-error">{errors.name}</p>}
           </div>
           {/* Age */}
           <div className="form-group form-group--sm">
             <label className="form-label" htmlFor="cf-age">Age *</label>
-            <input id="cf-age" type="number" min={18} className={`form-input ${errors.age ? 'form-input--error' : ''}`} value={draft.age} onChange={e => set('age', Number(e.target.value))} />
+            <input id="cf-age" type="number" min={18} className={`form-input ${errors.age ? 'form-input--error' : ''}`} value={draft.age} onChange={e => set('age', Number(e.target.value))} disabled={isView} />
             {errors.age && <p className="form-error">{errors.age}</p>}
           </div>
           {/* Age Type */}
           <div className="form-group form-group--sm">
             <label className="form-label" htmlFor="cf-agetype">Age Type</label>
-            <select id="cf-agetype" className="form-input" value={draft.ageType} onChange={e => set('ageType', e.target.value)}>
+            <select id="cf-agetype" className="form-input" value={draft.ageType} onChange={e => set('ageType', e.target.value)} disabled={isView}>
               {config.ageTypes.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
@@ -184,8 +179,8 @@ export function ContactModal({
           <div className="form-group form-group--sm">
             <label className="form-label">Contact via</label>
             <div className="form-toggle-group">
-              <button type="button" className={`form-toggle-btn ${draft.contactType === 'phone' ? 'form-toggle-btn--active' : ''}`} onClick={() => set('contactType', 'phone')}>📱 WhatsApp</button>
-              <button type="button" className={`form-toggle-btn ${draft.contactType === 'telegram' ? 'form-toggle-btn--active' : ''}`} onClick={() => set('contactType', 'telegram')}>✈️ Telegram</button>
+              <button type="button" className={`form-toggle-btn ${draft.contactType === 'phone' ? 'form-toggle-btn--active' : ''}`} onClick={() => set('contactType', 'phone')} disabled={isView}>📱 WhatsApp</button>
+              <button type="button" className={`form-toggle-btn ${draft.contactType === 'telegram' ? 'form-toggle-btn--active' : ''}`} onClick={() => set('contactType', 'telegram')} disabled={isView}>✈️ Telegram</button>
             </div>
           </div>
           {/* Contact value */}
@@ -199,6 +194,7 @@ export function ContactModal({
               value={draft.contactValue}
               onChange={e => set('contactValue', e.target.value)}
               placeholder={draft.contactType === 'phone' ? '+91XXXXXXXXXX' : '@username'}
+              disabled={isView}
             />
             {errors.contactValue && <p className="form-error">{errors.contactValue}</p>}
           </div>
@@ -207,7 +203,7 @@ export function ContactModal({
         {/* Location */}
         <div className="form-group">
           <label className="form-label" htmlFor="cf-location">Location</label>
-          <input id="cf-location" className="form-input" value={draft.location} onChange={e => set('location', e.target.value)} placeholder="City / area" />
+          <input id="cf-location" className="form-input" value={draft.location} onChange={e => set('location', e.target.value)} placeholder="City / area" disabled={isView} />
         </div>
 
         {/* ── Price entries ──────────────────────────────────────────────── */}
@@ -230,6 +226,7 @@ export function ContactModal({
                   value={entry.amount || ''}
                   onChange={e => updatePrice(idx, { amount: Number(e.target.value) })}
                   placeholder="13000"
+                  disabled={isView}
                 />
                 {errors[`price_${idx}`] && <p className="form-error">{errors[`price_${idx}`]}</p>}
               </div>
@@ -244,6 +241,7 @@ export function ContactModal({
                   value={entry.duration || ''}
                   onChange={e => updatePrice(idx, { duration: Number(e.target.value) })}
                   placeholder="2"
+                  disabled={isView}
                 />
                 {errors[`duration_${idx}`] && <p className="form-error">{errors[`duration_${idx}`]}</p>}
               </div>
@@ -251,22 +249,26 @@ export function ContactModal({
               <div className="form-group form-group--sm">
                 <label className="form-label">Unit</label>
                 <div className="form-toggle-group">
-                  <button type="button" className={`form-toggle-btn ${entry.durationUnit === 'shots' ? 'form-toggle-btn--active' : ''}`} onClick={() => updatePrice(idx, { durationUnit: 'shots' })}>shots</button>
-                  <button type="button" className={`form-toggle-btn ${entry.durationUnit === 'hrs' ? 'form-toggle-btn--active' : ''}`} onClick={() => updatePrice(idx, { durationUnit: 'hrs' })}>hrs</button>
+                  <button type="button" className={`form-toggle-btn ${entry.durationUnit === 'shots' ? 'form-toggle-btn--active' : ''}`} onClick={() => updatePrice(idx, { durationUnit: 'shots' })} disabled={isView}>shots</button>
+                  <button type="button" className={`form-toggle-btn ${entry.durationUnit === 'hrs' ? 'form-toggle-btn--active' : ''}`} onClick={() => updatePrice(idx, { durationUnit: 'hrs' })} disabled={isView}>hrs</button>
                 </div>
               </div>
 
-              <div className="price-entry__actions">
-                {draft.prices.length > 1 && (
-                  <button type="button" className="price-entry__remove" onClick={() => removePriceEntry(idx)} aria-label="Remove entry">✕</button>
-                )}
-              </div>
+              {!isView && (
+                <div className="price-entry__actions">
+                  {draft.prices.length > 1 && (
+                    <button type="button" className="price-entry__remove" onClick={() => removePriceEntry(idx)} aria-label="Remove entry">✕</button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
 
-          <button type="button" className="price-add-btn" onClick={addPriceEntry}>
-            ＋ Add another price
-          </button>
+          {!isView && (
+            <button type="button" className="price-add-btn" onClick={addPriceEntry}>
+              ＋ Add another price
+            </button>
+          )}
         </div>
 
         {/* Tier — manual selection */}
@@ -279,6 +281,7 @@ export function ContactModal({
                 type="button"
                 className={`tier-chip tier-chip--${t} ${draft.priceType === t ? 'tier-chip--active' : ''}`}
                 onClick={() => set('priceType', t)}
+                disabled={isView}
               >
                 {TIER_LABELS[t]}
               </button>
@@ -289,21 +292,23 @@ export function ContactModal({
         {/* Review */}
         <div className="form-group">
           <label className="form-label" htmlFor="cf-review">Review</label>
-          <textarea id="cf-review" className="form-input form-textarea" value={draft.reviewText} onChange={e => set('reviewText', e.target.value)} placeholder="Short review…" rows={3} />
+          <textarea id="cf-review" className="form-input form-textarea" value={draft.reviewText} onChange={e => set('reviewText', e.target.value)} placeholder="Short review…" rows={3} disabled={isView} />
         </div>
 
         {/* Active */}
         <div className="form-group form-group--inline">
           <label className="form-label" htmlFor="cf-active">Active</label>
-          <input id="cf-active" type="checkbox" className="form-checkbox" checked={draft.isActive} onChange={e => set('isActive', e.target.checked)} />
+          <input id="cf-active" type="checkbox" className="form-checkbox" checked={draft.isActive} onChange={e => set('isActive', e.target.checked)} disabled={isView} />
         </div>
 
         {/* Footer */}
         <div className="form-footer">
-          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button variant="primary" onClick={handleSave} loading={saving}>
-            {contact ? 'Save changes' : 'Add contact'}
-          </Button>
+          <Button variant="ghost" onClick={onClose} disabled={saving}>{isView ? 'Close' : 'Cancel'}</Button>
+          {!isView && (
+            <Button variant="primary" onClick={handleSave} loading={saving}>
+              {contact ? 'Save changes' : 'Add contact'}
+            </Button>
+          )}
         </div>
       </div>
     </Modal>

@@ -15,6 +15,7 @@ interface FilterBarProps {
   selectedLocations: Set<string>;
   onLocationToggle: (l: string) => void;
   onSelectAllLocations: (locs: string[]) => void;
+  vertical?: boolean;
 }
 
 export function FilterBar({
@@ -26,9 +27,10 @@ export function FilterBar({
   selectedLocations,
   onLocationToggle,
   onSelectAllLocations,
+  vertical = false,
 }: FilterBarProps) {
   return (
-    <div className="filter-bar">
+    <div className={`filter-bar ${vertical ? 'filter-bar--vertical' : ''}`}>
       <ActiveToggle value={showActiveOnly} onChange={onActiveToggle} />
       <div className="filter-bar__divider" />
       <TierChips selected={selectedTiers} onToggle={onTierToggle} />

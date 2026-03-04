@@ -21,6 +21,7 @@ interface ImageUploaderProps {
   pendingFiles: PendingImage[];
   onPendingChange: (files: PendingImage[]) => void;
   uploading?: boolean;
+  readOnly?: boolean;
 }
 
 export function ImageUploader({
@@ -29,6 +30,7 @@ export function ImageUploader({
   pendingFiles,
   onPendingChange,
   uploading = false,
+  readOnly = false,
 }: ImageUploaderProps) {
   const handlePick = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -53,14 +55,16 @@ export function ImageUploader({
       {existingFileIds.map(id => (
               <div key={id} className="image-uploader__thumb">
           <DriveImage fileId={id} alt="Existing" className="image-uploader__thumb-img" />
-          <button
-            className="image-uploader__remove"
-            type="button"
-            onClick={() => { evictDriveImageCache(id); onRemoveExisting(id); }}
-            aria-label="Remove image"
-          >
-            ✕
-          </button>
+          {!readOnly && (
+            <button
+              className="image-uploader__remove"
+              type="button"
+              onClick={() => { evictDriveImageCache(id); onRemoveExisting(id); }}
+              aria-label="Remove image"
+            >
+              ✕
+            </button>
+          )}
         </div>
       ))}
 
@@ -86,7 +90,7 @@ export function ImageUploader({
       ))}
 
       {/* Add button */}
-      {!uploading && (
+      {!uploading && !readOnly && (
         <label className="image-uploader__add">
           <span>＋ Add photo</span>
           <input

@@ -11,9 +11,10 @@ interface ContactGridProps {
   isSearching: boolean;
   onEdit: (c: Contact) => void;
   onDelete: (c: Contact) => void;
+  onView: (c: Contact) => void;
 }
 
-export function ContactGrid({ contacts, isSearching, onEdit, onDelete }: ContactGridProps) {
+export function ContactGrid({ contacts, isSearching, onEdit, onDelete, onView }: ContactGridProps) {
   if (contacts.length === 0) {
     return (
       <div className="empty-state">
@@ -32,7 +33,7 @@ export function ContactGrid({ contacts, isSearching, onEdit, onDelete }: Contact
         <p className="search-result-label">{contacts.length} result{contacts.length !== 1 ? 's' : ''}</p>
         <div className="card-grid">
           {contacts.map(c => (
-            <ContactCard key={c.id} contact={c} onEdit={onEdit} onDelete={onDelete} />
+            <ContactCard key={c.id} contact={c} onEdit={onEdit} onDelete={onDelete} onView={onView} />
           ))}
         </div>
       </div>
@@ -57,6 +58,7 @@ export function ContactGrid({ contacts, isSearching, onEdit, onDelete }: Contact
           contacts={byTier[tier]}
           onEdit={onEdit}
           onDelete={onDelete}
+          onView={onView}
         />
       ))}
     </div>

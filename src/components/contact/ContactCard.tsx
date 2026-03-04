@@ -1,23 +1,24 @@
 /**
- * ContactCard.tsx — compact contact card.
- * - ageType and tier badge removed from display
- * - Review: single line with ellipsis, click to expand
+ * ContactCard.tsx — horizontal compact card.
+ * Photo on left, content on right. Target height ~90px.
  */
 import { useState } from 'react';
 import type { Contact } from '../../types';
 import { formatPrices } from '../../utils/tierUtils';
-import { ImageCarousel } from './ImageCarousel';
+import { DriveImage } from '../ui/DriveImage';
+import { Lightbox } from '../ui/Lightbox';
 import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
 
 interface ContactCardProps {
   contact: Contact;
   onEdit: (contact: Contact) => void;
   onDelete: (contact: Contact) => void;
+  onView: (contact: Contact) => void;
 }
 
-export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
+export function ContactCard({ contact, onEdit, onDelete, onView }: ContactCardProps) {
   const [reviewExpanded, setReviewExpanded] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const handleContact = () => {
     if (contact.contactType === 'phone') {
@@ -28,58 +29,65 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
     }
   };
 
+  const hasImages = contact.imageFileIds.length > 0;
+
   return (
     <div className={`card ${!contact.isActive ? 'card--inactive' : ''}`}>
-      <div className="card__carousel">
-        <ImageCarousel fileIds={contact.imageFileIds} />
+
+      {/* ── Left: photo thumbnail ─────────────────────────────────── */}
+      <div className="card__photo" onClick={() => hasImages && setLightboxOpen(true)}>
+        {hasImages ? (
+          <>
+            <DriveImage
+              fileId={contact.imageFileIds[0]}
+              alt={contact.name}
+              className="card__photo-img"
+            />
+            {contact.imageFileIds.length > 1 && (
+              <span className="card__photo-count">+{contact.imageFileIds.length - 1}</span>
+            )}
+          </>
+        ) : (
+          <div className="card__photo-empty">👤</div>
+        )}
         {!contact.isActive && (
-          <div className="card__status">
-            <Badge label="Inactive" variant="inactive" />
+          <div className="card__photo-badge">
+            <Badge label="Off" variant="inactive" />
           </div>
         )}
       </div>
 
-      <div className="card__body">
-        {/* Name + age + ageType */}
-        <div className="card__name-row">
+      {/* ── Right: content ────────────────────────────────────────── */}
+      <div className="card__content" onClick={() => onView(contact)} style={{ cursor: 'pointer' }}>
+        {/* Row 1: name + age/type + actions */}
+        <div className="card__top-row">
           <span className="card__name">{contact.name}</span>
           <span className="card__age">{contact.age} · {contact.ageType}</span>
-        </div>
-
-        {/* Location */}
-        {contact.location && (
-          <div className="card__meta">
-            <span className="card__meta-icon">📍</span>
-            <span>{contact.location}</span>
+          <div className="card__actions">
+            <button className="card__action-btn" onClick={(e) => { e.stopPropagation(); onEdit(contact); }} aria-label="Edit">✏️</button>
+            <button className="card__action-btn card__action-btn--del" onClick={(e) => { e.stopPropagation(); onDelete(contact); }} aria-label="Delete">🗑️</button>
           </div>
-        )}
-
-        {/* All price entries */}
-        <div className="card__meta">
-          <span className="card__meta-icon">💰</span>
-          <span className="card__price">{formatPrices(contact.prices)}</span>
         </div>
 
-        {/* Contact deep-link */}
-        <button className="card__contact" onClick={handleContact}>
-          {contact.contactType === 'phone' ? (
-            <>
-              <span>📱</span>
-              <span>{contact.contactValue}</span>
-            </>
-          ) : (
-            <>
-              <span>✈️</span>
-              <span>@{contact.contactValue.replace(/^@/, '')}</span>
-            </>
-          )}
+        {/* Row 2: price */}
+        <div className="card__row">
+          <span className="card__price">💰 {formatPrices(contact.prices)}</span>
+        </div>
+
+        {/* Row 3: contact link */}
+        <button className="card__contact" onClick={(e) => { e.stopPropagation(); handleContact(); }}>
+          {contact.contactType === 'phone' ? `📱 ${contact.contactValue}` : `✈️ @${contact.contactValue.replace(/^@/, '')}`}
         </button>
 
-        {/* Review — one line truncated, click to expand */}
+        {/* Row 4: location + review (one line each) */}
+        {contact.location && (
+          <div className="card__row card__location">📍 {contact.location}</div>
+        )}
+
         {contact.reviewText && (
           <button
             className={`card__review ${reviewExpanded ? 'card__review--expanded' : ''}`}
-            onClick={() => setReviewExpanded(e => !e)}
+            onClick={(e) => { e.stopPropagation(); setReviewExpanded(v => !v); }}
             title={reviewExpanded ? undefined : contact.reviewText}
           >
             <span className="card__review-icon">★</span>
@@ -89,10 +97,9 @@ export function ContactCard({ contact, onEdit, onDelete }: ContactCardProps) {
         )}
       </div>
 
-      <div className="card__footer">
-        <Button size="sm" variant="ghost" onClick={() => onEdit(contact)}>✏️</Button>
-        <Button size="sm" variant="danger" onClick={() => onDelete(contact)}>🗑️</Button>
-      </div>
+      {lightboxOpen && (
+        <Lightbox fileIds={contact.imageFileIds} startIndex={0} onClose={() => setLightboxOpen(false)} />
+      )}
     </div>
   );
 }

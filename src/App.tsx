@@ -19,6 +19,7 @@ import { ContactGrid } from './components/contact/ContactGrid';
 import { ContactModal } from './components/forms/ContactModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { BottomSheet } from './components/ui/BottomSheet';
 import { Spinner } from './components/ui/Spinner';
 
 import type { Contact } from './types';
@@ -43,11 +44,25 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
 
   // ── Modal state ────────────────────────────────────────────────────────────
   const [editTarget, setEditTarget] = useState<Contact | null>(null);
+  const [viewTarget, setViewTarget] = useState<Contact | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSettingSaving, setIsSettingSaving] = useState(false);
+
+  // ── Mobile UI state ────────────────────────────────────────────────────────
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+
+  const handleSearchToggle = () => {
+    if (mobileSearchOpen) {
+      setMobileSearchOpen(false);
+      setQuery('');  // clear query so cards return to normal
+    } else {
+      setMobileSearchOpen(true);
+    }
+  };
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleSaveContact = async (
@@ -95,9 +110,13 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
         onSettingsClick={() => setSettingsOpen(true)}
         onLogout={onLogout}
         isSaving={isSaving}
+        onSearchToggle={handleSearchToggle}
+        onFilterOpen={() => setFilterSheetOpen(true)}
+        searchActive={mobileSearchOpen || filters.query.length > 0}
       />
 
-      <div className="app__toolbar">
+      {/* Desktop toolbar — hidden on mobile */}
+      <div className="app__toolbar app__toolbar--desktop">
         <SearchBar value={filters.query} onChange={setQuery} />
         <FilterBar
           showActiveOnly={filters.showActiveOnly}
@@ -111,12 +130,20 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
         />
       </div>
 
+      {/* Mobile search — expands below header when search icon tapped */}
+      {mobileSearchOpen && (
+        <div className="app__toolbar app__toolbar--mobile-search">
+          <SearchBar value={filters.query} onChange={setQuery} autoFocus />
+        </div>
+      )}
+
       <main className="app__main">
         <ContactGrid
           contacts={filteredContacts}
           isSearching={isSearching}
           onEdit={c => setEditTarget(c)}
           onDelete={c => setDeleteTarget(c)}
+          onView={c => setViewTarget(c)}
         />
       </main>
 
@@ -130,13 +157,32 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
         ＋
       </button>
 
-      {/* Add / Edit modal */}
+      {/* Filter bottom sheet — mobile only */}
+      <BottomSheet
+        isOpen={filterSheetOpen}
+        onClose={() => setFilterSheetOpen(false)}
+        title="Filters"
+      >
+        <FilterBar
+          showActiveOnly={filters.showActiveOnly}
+          onActiveToggle={setShowActiveOnly}
+          selectedTiers={filters.selectedTiers}
+          onTierToggle={toggleTier}
+          distinctLocations={distinctLocations}
+          selectedLocations={filters.selectedLocations}
+          onLocationToggle={toggleLocation}
+          onSelectAllLocations={setAllLocations}
+          vertical
+        />
+      </BottomSheet>
+
+      {/* Add / Edit / View modal */}
       <ContactModal
-        isOpen={addOpen || editTarget !== null}
-        onClose={() => { setAddOpen(false); setEditTarget(null); }}
-        contact={editTarget}
+        isOpen={addOpen || editTarget !== null || viewTarget !== null}
+        onClose={() => { setAddOpen(false); setEditTarget(null); setViewTarget(null); }}
+        contact={viewTarget || editTarget}
+        mode={viewTarget ? 'view' : editTarget ? 'edit' : 'add'}
         config={config}
-        imagesFolderId={imagesFolderId ?? ''}
         onSave={handleSaveContact}
       />
 
