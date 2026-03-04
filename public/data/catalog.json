@@ -1,0 +1,42 @@
+{
+    "entries": [
+        {
+            "id": "sample-1",
+            "name": "Rhode Island Red",
+            "description": "Excellent layer with friendly temperament. Perfect for backyard farming.",
+            "price": 5500,
+            "photos": [],
+            "reviews": [
+                {
+                    "id": "rev-1",
+                    "rating": 5,
+                    "comment": "Great birds! Very healthy and productive.",
+                    "date": "2026-01-05"
+                }
+            ],
+            "category": "recommended",
+            "dateAdded": "2026-01-01"
+        },
+        {
+            "id": "sample-2",
+            "name": "Leghorn White",
+            "description": "High egg production breed. Great for commercial purposes.",
+            "price": 8500,
+            "photos": [],
+            "reviews": [],
+            "category": "recommended",
+            "dateAdded": "2026-01-02"
+        },
+        {
+            "id": "sample-3",
+            "name": "Brahma",
+            "description": "Large heritage breed. Excellent for meat and eggs.",
+            "price": 15000,
+            "photos": [],
+            "reviews": [],
+            "category": "next-to-try",
+            "dateAdded": "2026-01-03"
+        }
+    ],
+    "lastUpdated": "2026-01-11T05:00:00+05:30"
+}
