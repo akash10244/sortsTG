@@ -22,10 +22,11 @@ export function ContactCard({ contact, onEdit, onDelete, onView }: ContactCardPr
 
   const handleContact = () => {
     if (contact.contactType === 'phone') {
-      window.open(`https://wa.me/${contact.contactValue.replace(/\D/g, '')}`, '_blank');
+      // wa.me usually handles _blank fine, but we can use _self to be safe as well
+      window.open(`https://wa.me/${contact.contactValue.replace(/\D/g, '')}`, '_self');
     } else {
       const handle = contact.contactValue.replace(/^@/, '');
-      window.open(`https://t.me/${handle}`, '_blank');
+      window.open(`https://t.me/${handle}`, '_self');
     }
   };
 
@@ -61,9 +62,13 @@ export function ContactCard({ contact, onEdit, onDelete, onView }: ContactCardPr
       <div className="card__content" onClick={() => onView(contact)} style={{ cursor: 'pointer' }}>
         {/* Row 1: name + age/type + actions */}
         <div className="card__top-row">
-          <span className="card__name">{contact.name}</span>
-          <span className="card__age">{contact.age} · {contact.ageType}</span>
-          <div className="card__actions">
+            <h3 className="card__name" title={contact.name}>{contact.name}</h3>
+            {(contact.age || contact.ageType) && (
+              <span className="card__age">
+               {contact.age ? contact.age + ' ·' : ''} {contact.ageType ? `${contact.ageType}` : ''}
+              </span>
+            )}
+            <div className="card__actions">
             <button className="card__action-btn" onClick={(e) => { e.stopPropagation(); onEdit(contact); }} aria-label="Edit">✏️</button>
             <button className="card__action-btn card__action-btn--del" onClick={(e) => { e.stopPropagation(); onDelete(contact); }} aria-label="Delete">🗑️</button>
           </div>

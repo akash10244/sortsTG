@@ -33,7 +33,7 @@ export interface PriceEntry {
 export interface Contact {
   id: string;
   name: string;
-  age: number;
+  age: number | null;
   ageType: string;
   contactType: ContactType;
   contactValue: string;

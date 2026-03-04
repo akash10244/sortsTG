@@ -25,7 +25,7 @@ interface ContactModalProps {
 
 export interface ContactDraftFields {
   name: string;
-  age: number;
+  age: number | '';
   ageType: string;
   contactType: ContactType;
   contactValue: string;
@@ -40,7 +40,7 @@ const EMPTY_PRICE_ENTRY: PriceEntry = { amount: 0, duration: 1, durationUnit: 's
 
 const EMPTY_DRAFT: ContactDraftFields = {
   name: '',
-  age: 18,
+  age: '',
   ageType: '',
   contactType: 'phone',
   contactValue: '',
@@ -54,7 +54,7 @@ const EMPTY_DRAFT: ContactDraftFields = {
 function draftFromContact(c: Contact): ContactDraftFields {
   return {
     name: c.name,
-    age: c.age,
+    age: c.age ?? '',
     ageType: c.ageType,
     contactType: c.contactType,
     contactValue: c.contactValue,
@@ -106,7 +106,7 @@ export function ContactModal({ isOpen, onClose, contact, config, mode = 'edit', 
   const validate = () => {
     const e: typeof errors = {};
     if (!draft.name.trim()) e.name = 'Name is required';
-    if (!draft.age || draft.age < 18) e.age = 'Age must be ≥ 18';
+    if (draft.age !== '' && draft.age < 18) e.age = 'Age must be ≥ 18 if provided';
     if (!draft.contactValue.trim()) e.contactValue = 'Contact is required';
     if (!draft.prices.length) e.prices = 'Add at least one price entry';
     draft.prices.forEach((p, i) => {
@@ -160,9 +160,9 @@ export function ContactModal({ isOpen, onClose, contact, config, mode = 'edit', 
             {errors.name && <p className="form-error">{errors.name}</p>}
           </div>
           {/* Age */}
-          <div className="form-group form-group--sm">
-            <label className="form-label" htmlFor="cf-age">Age *</label>
-            <input id="cf-age" type="number" min={18} className={`form-input ${errors.age ? 'form-input--error' : ''}`} value={draft.age} onChange={e => set('age', Number(e.target.value))} disabled={isView} />
+          <div className="form-group" style={{ width: '90px' }}>
+            <label className="form-label" htmlFor="cf-age">Age</label>
+            <input id="cf-age" type="number" min="18" className={`form-input ${errors.age ? 'form-input--error' : ''}`} value={draft.age} onChange={e => set('age', e.target.value ? parseInt(e.target.value, 10) || '' : '')} disabled={isView} />
             {errors.age && <p className="form-error">{errors.age}</p>}
           </div>
           {/* Age Type */}
