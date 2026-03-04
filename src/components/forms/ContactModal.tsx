@@ -34,7 +34,7 @@ export interface ContactDraftFields {
   prices: PriceEntry[];
   priceType: PriceType;  // set manually by user
   isActive: boolean;
-  isMidValue: boolean;
+  isLessInterested: boolean;
   didntExplorex: boolean;
 }
 
@@ -51,7 +51,7 @@ const EMPTY_DRAFT: ContactDraftFields = {
   prices: [{ ...EMPTY_PRICE_ENTRY }],
   priceType: 'budget',
   isActive: true,
-  isMidValue: false,
+  isLessInterested: false,
   didntExplorex: false,
 };
 
@@ -67,7 +67,7 @@ function draftFromContact(c: Contact): ContactDraftFields {
     prices: c.prices.length ? c.prices : [{ ...EMPTY_PRICE_ENTRY }],
     priceType: c.priceType,
     isActive: c.isActive,
-    isMidValue: c.isMidValue ?? false,
+    isLessInterested: c.isLessInterested ?? false,
     didntExplorex: c.didntExplorex ?? false,
   };
 }
@@ -306,10 +306,10 @@ export function ContactModal({ isOpen, onClose, contact, config, mode = 'edit', 
           <input id="cf-active" type="checkbox" className="form-checkbox" checked={draft.isActive} onChange={e => set('isActive', e.target.checked)} disabled={isView} />
         </div>
 
-        {/* Mid Value */}
+        {/* Less Interested */}
         <div className="form-group form-group--inline">
-          <label className="form-label" htmlFor="cf-mid">Mid Value</label>
-          <input id="cf-mid" type="checkbox" className="form-checkbox" checked={draft.isMidValue} onChange={e => set('isMidValue', e.target.checked)} disabled={isView} />
+          <label className="form-label" htmlFor="cf-less">Less Interested</label>
+          <input id="cf-less" type="checkbox" className="form-checkbox" checked={draft.isLessInterested} onChange={e => set('isLessInterested', e.target.checked)} disabled={isView} />
         </div>
 
         {/* Didn't Explorex */}

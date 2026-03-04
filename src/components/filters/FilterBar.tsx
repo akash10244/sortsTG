@@ -8,8 +8,8 @@ import { LocationDropdown } from './LocationDropdown';
 interface FilterBarProps {
   activeFilter: TriState;
   onActiveFilter: (v: TriState) => void;
-  midValueFilter: TriState;
-  onMidValueFilter: (v: TriState) => void;
+  lessInterestedFilter: TriState;
+  onLessInterestedFilter: (v: TriState) => void;
   didntExploreFilter: TriState;
   onDidntExploreFilter: (v: TriState) => void;
   selectedTiers: Set<PriceType>;
@@ -50,8 +50,8 @@ function TriPills({ label, value, onChange }: { label: string; value: TriState; 
 export function FilterBar({
   activeFilter,
   onActiveFilter,
-  midValueFilter,
-  onMidValueFilter,
+  lessInterestedFilter,
+  onLessInterestedFilter,
   didntExploreFilter,
   onDidntExploreFilter,
   selectedTiers,
@@ -66,7 +66,7 @@ export function FilterBar({
     <div className={`filter-bar ${vertical ? 'filter-bar--vertical' : ''}`}>
       <div className="filter-bar__toggles">
         <TriPills label="Active"       value={activeFilter}       onChange={onActiveFilter} />
-        <TriPills label="Is MID"    value={midValueFilter}     onChange={onMidValueFilter} />
+        <TriPills label="Less Interested"  value={lessInterestedFilter}     onChange={onLessInterestedFilter} />
         <TriPills label="Didn't Explore"   value={didntExploreFilter} onChange={onDidntExploreFilter} />
       </div>
       <div className="filter-bar__divider" />

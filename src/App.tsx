@@ -34,7 +34,7 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
     filters,
     setQuery,
     setActiveFilter,
-    setMidValueFilter,
+    setLessInterestedFilter,
     setDidntExploreFilter,
     toggleTier,
     toggleLocation,
@@ -123,8 +123,8 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
         <FilterBar
           activeFilter={filters.activeFilter}
           onActiveFilter={setActiveFilter}
-          midValueFilter={filters.midValueFilter}
-          onMidValueFilter={setMidValueFilter}
+          lessInterestedFilter={filters.lessInterestedFilter}
+          onLessInterestedFilter={setLessInterestedFilter}
           didntExploreFilter={filters.didntExploreFilter}
           onDidntExploreFilter={setDidntExploreFilter}
           selectedTiers={filters.selectedTiers}
@@ -172,8 +172,8 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
         <FilterBar
           activeFilter={filters.activeFilter}
           onActiveFilter={setActiveFilter}
-          midValueFilter={filters.midValueFilter}
-          onMidValueFilter={setMidValueFilter}
+          lessInterestedFilter={filters.lessInterestedFilter}
+          onLessInterestedFilter={setLessInterestedFilter}
           didntExploreFilter={filters.didntExploreFilter}
           onDidntExploreFilter={setDidntExploreFilter}
           selectedTiers={filters.selectedTiers}

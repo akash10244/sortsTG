@@ -14,7 +14,7 @@ interface UseFiltersReturn {
   filters: FilterState;
   setQuery: (q: string) => void;
   setActiveFilter: (v: TriState) => void;
-  setMidValueFilter: (v: TriState) => void;
+  setLessInterestedFilter: (v: TriState) => void;
   setDidntExploreFilter: (v: TriState) => void;
   toggleTier: (tier: PriceType) => void;
   toggleLocation: (loc: string) => void;
@@ -34,7 +34,7 @@ function applyTriState(filter: TriState, value: boolean | undefined): boolean {
 export function useFilters(contacts: Contact[]): UseFiltersReturn {
   const [query, setQueryRaw] = useState('');
   const [activeFilter, setActiveFilter] = useState<TriState>('true');
-  const [midValueFilter, setMidValueFilter] = useState<TriState>('false');
+  const [lessInterestedFilter, setLessInterestedFilter] = useState<TriState>('false');
   const [didntExploreFilter, setDidntExploreFilter] = useState<TriState>('false');
   const [selectedTiers, setSelectedTiers] = useState<Set<PriceType>>(new Set(ALL_TIERS));
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set<string>());
@@ -78,7 +78,7 @@ export function useFilters(contacts: Contact[]): UseFiltersReturn {
       contacts.filter(c => {
         // Tri-state boolean filters
         if (!applyTriState(activeFilter, c.isActive)) return false;
-        if (!applyTriState(midValueFilter, c.isMidValue)) return false;
+        if (!applyTriState(lessInterestedFilter, c.isLessInterested)) return false;
         if (!applyTriState(didntExploreFilter, c.didntExplorex)) return false;
 
         // Tier filter
@@ -96,15 +96,15 @@ export function useFilters(contacts: Contact[]): UseFiltersReturn {
         return true;
       })
     );
-  }, [contacts, query, activeFilter, midValueFilter, didntExploreFilter, selectedTiers, selectedLocations]);
+  }, [contacts, query, activeFilter, lessInterestedFilter, didntExploreFilter, selectedTiers, selectedLocations]);
 
   const isSearching = query.trim().length > 0;
 
   return {
-    filters: { query, activeFilter, midValueFilter, didntExploreFilter, selectedTiers, selectedLocations },
+    filters: { query, activeFilter, lessInterestedFilter, didntExploreFilter, selectedTiers, selectedLocations },
     setQuery,
     setActiveFilter,
-    setMidValueFilter,
+    setLessInterestedFilter,
     setDidntExploreFilter,
     toggleTier,
     toggleLocation,

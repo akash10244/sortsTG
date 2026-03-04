@@ -51,6 +51,7 @@ export function Lightbox({ fileIds, startIndex, onClose }: LightboxProps) {
           fileId={fileIds[index]}
           alt={`Image ${index + 1} of ${count}`}
           className="lightbox__img"
+          size="s2000"
         />
 
         {count > 1 && (

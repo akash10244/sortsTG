@@ -42,7 +42,7 @@ export interface Contact {
   /** Google Drive file IDs for images stored in the images subfolder */
   imageFileIds: string[];
   isActive: boolean;
-  isMidValue?: boolean;
+  isLessInterested?: boolean;
   didntExplorex?: boolean;
   /** One or more price+duration entries. Tier derived from min(prices.amount). */
   prices: PriceEntry[];
@@ -85,7 +85,7 @@ export type TriState = 'true' | 'false' | 'ignore';
 export interface FilterState {
   query: string;
   activeFilter: TriState;
-  midValueFilter: TriState;
+  lessInterestedFilter: TriState;
   didntExploreFilter: TriState;
   selectedTiers: Set<PriceType>;
   selectedLocations: Set<string>;

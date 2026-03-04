@@ -32,7 +32,12 @@ export async function loadData(appFolderId: string): Promise<DriveDataFile> {
   const contacts = (data.contacts ?? []).map((c: any) => {
     // Migrate old price:number → prices:PriceEntry[]
     if (!c.prices && typeof c.price === 'number') {
-      return { ...c, prices: [{ amount: c.price, duration: 1, durationUnit: 'shots' }] };
+      c.prices = [{ amount: c.price, duration: 1, durationUnit: 'shots' }];
+    }
+    // Migrate old isMidValue → isLessInterested
+    if (c.isMidValue !== undefined && c.isLessInterested === undefined) {
+      c.isLessInterested = c.isMidValue;
+      delete c.isMidValue;
     }
     return c;
   });
