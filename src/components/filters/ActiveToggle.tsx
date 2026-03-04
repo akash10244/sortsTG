@@ -6,15 +6,16 @@ import { Toggle } from '../ui/Toggle';
 interface ActiveToggleProps {
   value: boolean;
   onChange: (v: boolean) => void;
+  label?: string;
 }
 
-export function ActiveToggle({ value, onChange }: ActiveToggleProps) {
+export function ActiveToggle({ value, onChange, label = 'Active only' }: ActiveToggleProps) {
   return (
     <Toggle
-      id="active-toggle"
+      id={`toggle-${label.replace(/\\s+/g, '-').toLowerCase()}`}
       checked={value}
       onChange={onChange}
-      label="Active only"
+      label={label}
     />
   );
 }

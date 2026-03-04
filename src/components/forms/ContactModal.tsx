@@ -34,6 +34,8 @@ export interface ContactDraftFields {
   prices: PriceEntry[];
   priceType: PriceType;  // set manually by user
   isActive: boolean;
+  isMidValue: boolean;
+  didntExplorex: boolean;
 }
 
 const EMPTY_PRICE_ENTRY: PriceEntry = { amount: 0, duration: 1, durationUnit: 'shots' };
@@ -49,6 +51,8 @@ const EMPTY_DRAFT: ContactDraftFields = {
   prices: [{ ...EMPTY_PRICE_ENTRY }],
   priceType: 'budget',
   isActive: true,
+  isMidValue: false,
+  didntExplorex: false,
 };
 
 function draftFromContact(c: Contact): ContactDraftFields {
@@ -63,6 +67,8 @@ function draftFromContact(c: Contact): ContactDraftFields {
     prices: c.prices.length ? c.prices : [{ ...EMPTY_PRICE_ENTRY }],
     priceType: c.priceType,
     isActive: c.isActive,
+    isMidValue: c.isMidValue ?? false,
+    didntExplorex: c.didntExplorex ?? false,
   };
 }
 
@@ -295,10 +301,21 @@ export function ContactModal({ isOpen, onClose, contact, config, mode = 'edit', 
           <textarea id="cf-review" className="form-input form-textarea" value={draft.reviewText} onChange={e => set('reviewText', e.target.value)} placeholder="Short review…" rows={3} disabled={isView} />
         </div>
 
-        {/* Active */}
         <div className="form-group form-group--inline">
           <label className="form-label" htmlFor="cf-active">Active</label>
           <input id="cf-active" type="checkbox" className="form-checkbox" checked={draft.isActive} onChange={e => set('isActive', e.target.checked)} disabled={isView} />
+        </div>
+
+        {/* Mid Value */}
+        <div className="form-group form-group--inline">
+          <label className="form-label" htmlFor="cf-mid">Mid Value</label>
+          <input id="cf-mid" type="checkbox" className="form-checkbox" checked={draft.isMidValue} onChange={e => set('isMidValue', e.target.checked)} disabled={isView} />
+        </div>
+
+        {/* Didn't Explorex */}
+        <div className="form-group form-group--inline">
+          <label className="form-label" htmlFor="cf-didnt">Didn't Explorex</label>
+          <input id="cf-didnt" type="checkbox" className="form-checkbox" checked={draft.didntExplorex} onChange={e => set('didntExplorex', e.target.checked)} disabled={isView} />
         </div>
 
         {/* Footer */}

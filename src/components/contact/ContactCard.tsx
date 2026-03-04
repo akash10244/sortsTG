@@ -68,6 +68,8 @@ export function ContactCard({ contact, onEdit, onDelete, onView }: ContactCardPr
                {contact.age ? contact.age + ' ·' : ''} {contact.ageType ? `${contact.ageType}` : ''}
               </span>
             )}
+            {contact.isMidValue && <Badge label="Mid" variant="active" />}
+            {contact.didntExplorex && <Badge label="No Exp" variant="inactive" />}
             <div className="card__actions">
             <button className="card__action-btn" onClick={(e) => { e.stopPropagation(); onEdit(contact); }} aria-label="Edit">✏️</button>
             <button className="card__action-btn card__action-btn--del" onClick={(e) => { e.stopPropagation(); onDelete(contact); }} aria-label="Delete">🗑️</button>

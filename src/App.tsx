@@ -33,7 +33,9 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
   const {
     filters,
     setQuery,
-    setShowActiveOnly,
+    setActiveFilter,
+    setMidValueFilter,
+    setDidntExploreFilter,
     toggleTier,
     toggleLocation,
     setAllLocations,
@@ -119,8 +121,12 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
       <div className="app__toolbar app__toolbar--desktop">
         <SearchBar value={filters.query} onChange={setQuery} />
         <FilterBar
-          showActiveOnly={filters.showActiveOnly}
-          onActiveToggle={setShowActiveOnly}
+          activeFilter={filters.activeFilter}
+          onActiveFilter={setActiveFilter}
+          midValueFilter={filters.midValueFilter}
+          onMidValueFilter={setMidValueFilter}
+          didntExploreFilter={filters.didntExploreFilter}
+          onDidntExploreFilter={setDidntExploreFilter}
           selectedTiers={filters.selectedTiers}
           onTierToggle={toggleTier}
           distinctLocations={distinctLocations}
@@ -164,8 +170,12 @@ function AuthenticatedApp({ appFolderId, onLogout }: { appFolderId: string; onLo
         title="Filters"
       >
         <FilterBar
-          showActiveOnly={filters.showActiveOnly}
-          onActiveToggle={setShowActiveOnly}
+          activeFilter={filters.activeFilter}
+          onActiveFilter={setActiveFilter}
+          midValueFilter={filters.midValueFilter}
+          onMidValueFilter={setMidValueFilter}
+          didntExploreFilter={filters.didntExploreFilter}
+          onDidntExploreFilter={setDidntExploreFilter}
           selectedTiers={filters.selectedTiers}
           onTierToggle={toggleTier}
           distinctLocations={distinctLocations}

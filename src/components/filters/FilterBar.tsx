@@ -1,14 +1,17 @@
 /**
  * FilterBar.tsx — horizontal strip composing all filter controls.
  */
-import type { PriceType } from '../../types';
-import { ActiveToggle } from './ActiveToggle';
+import type { PriceType, TriState } from '../../types';
 import { TierChips } from './TierChips';
 import { LocationDropdown } from './LocationDropdown';
 
 interface FilterBarProps {
-  showActiveOnly: boolean;
-  onActiveToggle: (v: boolean) => void;
+  activeFilter: TriState;
+  onActiveFilter: (v: TriState) => void;
+  midValueFilter: TriState;
+  onMidValueFilter: (v: TriState) => void;
+  didntExploreFilter: TriState;
+  onDidntExploreFilter: (v: TriState) => void;
   selectedTiers: Set<PriceType>;
   onTierToggle: (t: PriceType) => void;
   distinctLocations: string[];
@@ -18,9 +21,39 @@ interface FilterBarProps {
   vertical?: boolean;
 }
 
+const TRI_LABELS: { value: TriState; label: string }[] = [
+  { value: 'true',   label: 'Yes' },
+  { value: 'false',  label: 'No'  },
+  { value: 'ignore', label: 'Any' },
+];
+
+function TriPills({ label, value, onChange }: { label: string; value: TriState; onChange: (v: TriState) => void }) {
+  return (
+    <div className="tri-pill-group">
+      <span className="tri-pill-group__label">{label}</span>
+      <div className="tri-pill-group__pills">
+        {TRI_LABELS.map(opt => (
+          <button
+            key={opt.value}
+            type="button"
+            className={`tri-pill ${value === opt.value ? `tri-pill--active tri-pill--${opt.value}` : ''}`}
+            onClick={() => onChange(opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function FilterBar({
-  showActiveOnly,
-  onActiveToggle,
+  activeFilter,
+  onActiveFilter,
+  midValueFilter,
+  onMidValueFilter,
+  didntExploreFilter,
+  onDidntExploreFilter,
   selectedTiers,
   onTierToggle,
   distinctLocations,
@@ -31,7 +64,11 @@ export function FilterBar({
 }: FilterBarProps) {
   return (
     <div className={`filter-bar ${vertical ? 'filter-bar--vertical' : ''}`}>
-      <ActiveToggle value={showActiveOnly} onChange={onActiveToggle} />
+      <div className="filter-bar__toggles">
+        <TriPills label="Active"       value={activeFilter}       onChange={onActiveFilter} />
+        <TriPills label="Is MID"    value={midValueFilter}     onChange={onMidValueFilter} />
+        <TriPills label="Didn't Explore"   value={didntExploreFilter} onChange={onDidntExploreFilter} />
+      </div>
       <div className="filter-bar__divider" />
       <TierChips selected={selectedTiers} onToggle={onTierToggle} />
       <div className="filter-bar__divider" />

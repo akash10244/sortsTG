@@ -8,12 +8,14 @@
 import { useState, useMemo, useCallback } from 'react';
 import { ALL_TIERS } from '../types';
 import { sortByPrice } from '../utils/tierUtils';
-import type { Contact, PriceType, FilterState } from '../types';
+import type { Contact, PriceType, FilterState, TriState } from '../types';
 
 interface UseFiltersReturn {
   filters: FilterState;
   setQuery: (q: string) => void;
-  setShowActiveOnly: (v: boolean) => void;
+  setActiveFilter: (v: TriState) => void;
+  setMidValueFilter: (v: TriState) => void;
+  setDidntExploreFilter: (v: TriState) => void;
   toggleTier: (tier: PriceType) => void;
   toggleLocation: (loc: string) => void;
   setAllLocations: (locs: string[]) => void;
@@ -22,9 +24,18 @@ interface UseFiltersReturn {
   distinctLocations: string[];
 }
 
+/** Helper: apply a tri-state filter to a boolean field */
+function applyTriState(filter: TriState, value: boolean | undefined): boolean {
+  if (filter === 'ignore') return true;
+  if (filter === 'true') return !!value;
+  return !value;
+}
+
 export function useFilters(contacts: Contact[]): UseFiltersReturn {
   const [query, setQueryRaw] = useState('');
-  const [showActiveOnly, setShowActiveOnly] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<TriState>('true');
+  const [midValueFilter, setMidValueFilter] = useState<TriState>('false');
+  const [didntExploreFilter, setDidntExploreFilter] = useState<TriState>('false');
   const [selectedTiers, setSelectedTiers] = useState<Set<PriceType>>(new Set(ALL_TIERS));
   const [selectedLocations, setSelectedLocations] = useState<Set<string>>(new Set<string>());
 
@@ -34,7 +45,6 @@ export function useFilters(contacts: Contact[]): UseFiltersReturn {
     return [...locs].sort();
   }, [contacts]);
 
-  // Sync selectedLocations when new locations appear (ensure they default to selected)
   const setQuery = useCallback((q: string) => setQueryRaw(q), []);
 
   const toggleTier = useCallback((tier: PriceType) => {
@@ -66,8 +76,10 @@ export function useFilters(contacts: Contact[]): UseFiltersReturn {
 
     return sortByPrice(
       contacts.filter(c => {
-        // Active filter
-        if (showActiveOnly && !c.isActive) return false;
+        // Tri-state boolean filters
+        if (!applyTriState(activeFilter, c.isActive)) return false;
+        if (!applyTriState(midValueFilter, c.isMidValue)) return false;
+        if (!applyTriState(didntExploreFilter, c.didntExplorex)) return false;
 
         // Tier filter
         if (!selectedTiers.has(c.priceType)) return false;
@@ -84,14 +96,16 @@ export function useFilters(contacts: Contact[]): UseFiltersReturn {
         return true;
       })
     );
-  }, [contacts, query, showActiveOnly, selectedTiers, selectedLocations]);
+  }, [contacts, query, activeFilter, midValueFilter, didntExploreFilter, selectedTiers, selectedLocations]);
 
   const isSearching = query.trim().length > 0;
 
   return {
-    filters: { query, showActiveOnly, selectedTiers, selectedLocations },
+    filters: { query, activeFilter, midValueFilter, didntExploreFilter, selectedTiers, selectedLocations },
     setQuery,
-    setShowActiveOnly,
+    setActiveFilter,
+    setMidValueFilter,
+    setDidntExploreFilter,
     toggleTier,
     toggleLocation,
     setAllLocations,
