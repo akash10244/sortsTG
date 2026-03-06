@@ -72,8 +72,7 @@ export function useAuth(): UseAuthReturn {
   const loginWithGoogle = useGoogleLogin({
     flow: 'auth-code',
     scope: GOOGLE_SCOPES,
-    // @ts-expect-error - 'prompt' is passed down to Google Identity Services but is missing in the @react-oauth/google types
-    prompt: 'select_account', // Forces the account selection screen
+    select_account: true, // Forces the account selection screen
     onSuccess: async ({ code }) => {
       setState(s => ({ ...s, isLoading: true, error: null }));
       try {
