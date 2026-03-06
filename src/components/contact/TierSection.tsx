@@ -1,10 +1,10 @@
 /**
  * TierSection.tsx — one tier section (header + card grid).
  */
-import { useState } from 'react';
 import type { Contact, PriceType } from '../../types';
 import { TIER_LABELS } from '../../types';
 import { ContactCard } from './ContactCard';
+import { useLocalStorage } from '../../hooks/useLocalStorage';
 
 interface TierSectionProps {
   tier: PriceType;
@@ -15,7 +15,7 @@ interface TierSectionProps {
 }
 
 export function TierSection({ tier, contacts, onEdit, onDelete, onView }: TierSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useLocalStorage<boolean>(`tier-expanded-${tier}`, true);
 
   return (
     <section className="tier-section">

@@ -34,7 +34,7 @@ export function Header({ onSettingsClick, onLogout, isSaving, onSearchToggle, on
     <header className="header">
       <div className="header__brand">
         <span className="header__logo"></span>
-        <h1 className="header__title">SortsTG</h1>
+        <h1 className="header__title">SAYRIFLE</h1>
         {isSaving && <span className="header__saving">Saving…</span>}
       </div>
 
