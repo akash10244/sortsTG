@@ -1,32 +1,17 @@
-// ─── Application-level constants ────────────────────────────────────────────
+// ─── Firebase Configuration ──────────────────────────────────────────────────
+export const FIREBASE_CONFIG = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY ?? '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID ?? '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ?? '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID ?? '',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID ?? '',
+};
 
-export const GOOGLE_CLIENT_ID =
-  import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
-
-/** Full Drive read/write scope */
-export const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/drive';
-
-export const AUTH_SERVER_URL =
-  import.meta.env.VITE_AUTH_SERVER_URL ?? 'http://localhost:3001';
-
-/**
- * Google OAuth client secret — set VITE_GOOGLE_CLIENT_SECRET in Vercel env vars.
- * Yes, it ends up in the JS bundle. Fine for a personal app.
- */
-export const GOOGLE_CLIENT_SECRET =
-  import.meta.env.VITE_GOOGLE_CLIENT_SECRET ?? '';
-
-/** Folder path inside Google Drive where all app data lives */
-export const DRIVE_FOLDER_PATH = 'projects/sortsTG';
-
-/** Sub-folder inside the app folder where contact images are stored */
-export const IMAGES_SUBFOLDER_NAME = 'images';
-
-/** Filename for the main data JSON stored in the app folder */
-export const DATA_FILENAME = 'contacts.json';
-
-/** localStorage keys */
-export const STORAGE_KEYS = {
-  REFRESH_TOKEN: 'app_refresh_token',
-  ACCESS_TOKEN_EXPIRES: 'app_token_expires_at',
-} as const;
+// ─── ImageKit Configuration ──────────────────────────────────────────────────
+export const IMAGEKIT_CONFIG = {
+  publicKey: import.meta.env.VITE_IMAGEKIT_PUBLIC_KEY ?? '',
+  privateKey: import.meta.env.VITE_IMAGEKIT_PRIVATE_KEY ?? '',
+  urlEndpoint: import.meta.env.VITE_IMAGEKIT_URL_ENDPOINT ?? '',
+};

@@ -1,16 +1,26 @@
 /**
  * useContacts.ts
  *
- * Central state for contacts + app config.
- * All mutations optimistically update local state then persist to Drive.
+ * Firebase Firestore & ImageKit integration.
+ * Manages the contacts list and configuration, scoping everything under the active userId.
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { loadData, saveData } from '../services/contactService';
-import { deleteFile, uploadFile, makeFilePublic } from '../services/driveService';
+import {
+  subscribeToContacts,
+  saveContactDoc,
+  deleteContactDoc,
+  fetchConfigDoc,
+  saveConfigDoc,
+  poolContactsDocs,
+  depoolContactsDocs,
+} from '../services/firebaseService';
+import { uploadToImageKit, deleteFromImageKit } from '../services/imagekitService';
 import { recomputeTiers } from '../utils/tierUtils';
 import { generateId } from '../utils/uuid';
-import type { Contact, AppConfig, DriveDataFile } from '../types';
+import { compressImage } from '../utils/imageCompressor';
+import type { Contact, AppConfig } from '../types';
+import { DEFAULT_AGE_TYPES, DEFAULT_TIER_BOUNDARIES } from '../types';
 
 interface UseContactsReturn {
   contacts: Contact[];
@@ -18,136 +28,298 @@ interface UseContactsReturn {
   isLoading: boolean;
   isSaving: boolean;
   error: string | null;
-  addContact: (draft: ContactDraft, imageFiles: File[], imagesFolderId: string) => Promise<void>;
-  updateContact: (id: string, draft: ContactDraft, newImageFiles: File[], removedFileIds: string[], imagesFolderId: string) => Promise<void>;
+  addContact: (draft: ContactDraft, imageFiles: File[]) => Promise<void>;
+  updateContact: (
+    id: string,
+    draft: ContactDraft,
+    newImageFiles: File[],
+    removedImageIds: string[]
+  ) => Promise<void>;
   deleteContact: (id: string) => Promise<void>;
   updateConfig: (config: AppConfig) => Promise<void>;
+  poolContacts: (contactIds: string[]) => Promise<void>;
+  depoolContacts: (contactIds: string[]) => Promise<void>;
 }
 
-/** The raw form data before IDs / timestamps are generated */
-export type ContactDraft = Omit<Contact, 'id' | 'imageFileIds' | 'createdAt' | 'updatedAt'>;
+export type ContactDraft = Omit<
+  Contact,
+  'id' | 'imageFileIds' | 'imageUrls' | 'imageKitIds' | 'createdAt' | 'updatedAt'
+>;
 
-export function useContacts(appFolderId: string | null): UseContactsReturn {
-  const [data, setData] = useState<DriveDataFile>({ contacts: [], config: { ageTypes: [], tierBoundaries: { midrangeMin: 7000, premiumMin: 13000, modelsMin: 18000 } } });
+const DEFAULT_CONFIG: AppConfig = {
+  ageTypes: DEFAULT_AGE_TYPES,
+  tierBoundaries: DEFAULT_TIER_BOUNDARIES,
+};
+
+export function useContacts(userId: string | null): UseContactsReturn {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Load on mount ──────────────────────────────────────────────────────────
+  // ── Sync contacts and config on userId change ──────────────────────────────
   useEffect(() => {
-    if (!appFolderId) return;
+    if (!userId) {
+      setContacts([]);
+      setConfig(DEFAULT_CONFIG);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-    loadData(appFolderId)
-      .then(setData)
-      .catch((err) => setError(err.message ?? 'Failed to load contacts'))
-      .finally(() => setIsLoading(false));
-  }, [appFolderId]);
 
-  // ── Persist helper ─────────────────────────────────────────────────────────
-  const persist = useCallback(async (next: DriveDataFile) => {
-    if (!appFolderId) return;
-    setIsSaving(true);
-    try {
-      await saveData(next, appFolderId);
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to save');
-      throw err;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [appFolderId]);
+    // 1. Fetch Config
+    fetchConfigDoc(userId)
+      .then(async (userConfig) => {
+        if (userConfig) {
+          setConfig(userConfig);
+        } else {
+          // If no user config exists yet, initialize with default config
+          await saveConfigDoc(userId, DEFAULT_CONFIG);
+          setConfig(DEFAULT_CONFIG);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load user config:', err);
+        setError('Failed to load settings.');
+      });
+
+    // 2. Subscribe to contacts
+    const unsubscribe = subscribeToContacts(
+      userId,
+      (updatedContacts) => {
+        setContacts(updatedContacts);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.error('Failed to sync contacts:', err);
+        setError(err.message ?? 'Failed to sync contacts.');
+        setIsLoading(false);
+      }
+    );
+
+    return unsubscribe;
+  }, [userId]);
 
   // ── Image upload helper ────────────────────────────────────────────────────
-  const uploadImages = useCallback(async (files: File[], imagesFolderId: string): Promise<string[]> => {
+  const uploadImages = useCallback(async (files: File[]): Promise<{ fileId: string; url: string }[]> => {
     return Promise.all(
       files.map(async (file) => {
-        const result = await uploadFile(file, imagesFolderId);
-        await makeFilePublic(result.id);
-        return result.id;
+        let uploadData: File | Blob = file;
+        try {
+          uploadData = await compressImage(file);
+        } catch (err) {
+          console.warn('Failed to compress image, uploading original instead:', err);
+        }
+        // Create a unique file name to avoid collisions
+        const cleanName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const fileName = `${Date.now()}_${cleanName}`;
+        return uploadToImageKit(uploadData, fileName);
       })
     );
   }, []);
 
   // ── addContact ─────────────────────────────────────────────────────────────
-  const addContact = useCallback(async (
-    draft: ContactDraft,
-    imageFiles: File[],
-    imagesFolderId: string
-  ) => {
-    const imageFileIds = await uploadImages(imageFiles, imagesFolderId);
-    const now = new Date().toISOString();
-    const contact: Contact = {
-      ...draft,
-      id: generateId(),
-      imageFileIds,
-      priceType: draft.priceType,  // user-selected in modal
-      createdAt: now,
-      updatedAt: now,
-    };
-    const next = { ...data, contacts: [...data.contacts, contact] };
-    setData(next);
-    await persist(next);
-  }, [data, uploadImages, persist]);
+  const addContact = useCallback(
+    async (draft: ContactDraft, imageFiles: File[]) => {
+      if (!userId) return;
+      setIsSaving(true);
+      try {
+        const uploaded = await uploadImages(imageFiles);
+        const imageUrls = uploaded.map((u) => u.url);
+        const imageKitIds = uploaded.map((u) => u.fileId);
+
+        const now = new Date().toISOString();
+        const contact: Contact = {
+          ...draft,
+          id: generateId(),
+          imageFileIds: [], // Empty for new Firebase-native contacts
+          imageUrls,
+          imageKitIds,
+          priceType: draft.priceType,
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        await saveContactDoc(userId, contact);
+      } catch (err: any) {
+        console.error('Failed to add contact:', err);
+        setError(err.message ?? 'Failed to add contact.');
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [userId, uploadImages]
+  );
 
   // ── updateContact ──────────────────────────────────────────────────────────
-  const updateContact = useCallback(async (
-    id: string,
-    draft: ContactDraft,
-    newImageFiles: File[],
-    removedFileIds: string[],
-    imagesFolderId: string
-  ) => {
-    // Delete removed images from Drive
-    await Promise.all(removedFileIds.map(deleteFile));
+  const updateContact = useCallback(
+    async (
+      id: string,
+      draft: ContactDraft,
+      newImageFiles: File[],
+      removedImageIds: string[]
+    ) => {
+      if (!userId) return;
+      setIsSaving(true);
+      try {
+        // Find existing contact
+        const existing = contacts.find((c) => c.id === id);
+        if (!existing) throw new Error('Contact not found');
 
-    // Upload new images
-    const newIds = await uploadImages(newImageFiles, imagesFolderId);
+        // Delete removed ImageKit images from CDN
+        const existingKitIds = existing.imageKitIds ?? [];
+        const imageKitDeletes = removedImageIds.filter((imgId) =>
+          existingKitIds.includes(imgId)
+        );
+        await Promise.all(
+          imageKitDeletes.map((kitId) => deleteFromImageKit(kitId).catch(console.warn))
+        );
 
-    const existing = data.contacts.find(c => c.id === id);
-    if (!existing) return;
+        // Upload new images to ImageKit
+        const newUploaded = await uploadImages(newImageFiles);
 
-    const keptIds = existing.imageFileIds.filter(fid => !removedFileIds.includes(fid));
-    const updated: Contact = {
-      ...existing,
-      ...draft,
-      imageFileIds: [...keptIds, ...newIds],
-      priceType: draft.priceType,  // user-selected in modal
-      updatedAt: new Date().toISOString(),
-    };
+        // Compute next lists of images
+        const nextImageUrls = (existing.imageUrls ?? []).filter((_, idx) => {
+          const kitId = existing.imageKitIds?.[idx];
+          const driveId = existing.imageFileIds?.[idx];
+          // Keep if the corresponding ID was not removed
+          return (
+            (kitId && !removedImageIds.includes(kitId)) ||
+            (driveId && !removedImageIds.includes(driveId))
+          );
+        });
 
-    const next = {
-      ...data,
-      contacts: data.contacts.map(c => (c.id === id ? updated : c)),
-    };
-    setData(next);
-    await persist(next);
-  }, [data, uploadImages, persist]);
+        const nextImageKitIds = existingKitIds.filter((kitId) => !removedImageIds.includes(kitId));
+        const nextImageFileIds = (existing.imageFileIds ?? []).filter(
+          (driveId) => !removedImageIds.includes(driveId)
+        );
+
+        // Append new images
+        newUploaded.forEach((u) => {
+          nextImageUrls.push(u.url);
+          nextImageKitIds.push(u.fileId);
+        });
+
+        const updated: Contact = {
+          ...existing,
+          ...draft,
+          imageFileIds: nextImageFileIds,
+          imageUrls: nextImageUrls,
+          imageKitIds: nextImageKitIds,
+          priceType: draft.priceType,
+          updatedAt: new Date().toISOString(),
+        };
+
+        await saveContactDoc(userId, updated);
+      } catch (err: any) {
+        console.error('Failed to update contact:', err);
+        setError(err.message ?? 'Failed to update contact.');
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [userId, contacts, uploadImages]
+  );
 
   // ── deleteContact ──────────────────────────────────────────────────────────
-  const deleteContact = useCallback(async (id: string) => {
-    const contact = data.contacts.find(c => c.id === id);
-    // Delete Drive images (fire-and-forget soft failures)
-    if (contact?.imageFileIds.length) {
-      await Promise.all(contact.imageFileIds.map(fid => deleteFile(fid).catch(console.warn)));
-    }
-    const next = { ...data, contacts: data.contacts.filter(c => c.id !== id) };
-    setData(next);
-    await persist(next);
-  }, [data, persist]);
+  const deleteContact = useCallback(
+    async (id: string) => {
+      if (!userId) return;
+      setIsSaving(true);
+      try {
+        const contact = contacts.find((c) => c.id === id);
+        if (contact) {
+          // Delete ImageKit photos
+          const kitIds = contact.imageKitIds ?? [];
+          if (kitIds.length > 0) {
+            await Promise.all(
+              kitIds.map((kitId) => deleteFromImageKit(kitId).catch(console.warn))
+            );
+          }
+        }
+        await deleteContactDoc(userId, id);
+      } catch (err: any) {
+        console.error('Failed to delete contact:', err);
+        setError(err.message ?? 'Failed to delete contact.');
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [userId, contacts]
+  );
 
   // ── updateConfig ───────────────────────────────────────────────────────────
-  const updateConfig = useCallback(async (config: AppConfig) => {
-    // Re-derive all tiers if boundaries changed
-    const contacts = recomputeTiers(data.contacts, config.tierBoundaries);
-    const next = { contacts, config };
-    setData(next);
-    await persist(next);
-  }, [data, persist]);
+  const updateConfig = useCallback(
+    async (newConfig: AppConfig) => {
+      if (!userId) return;
+      setIsSaving(true);
+      try {
+        // Save the new config document to Firestore
+        await saveConfigDoc(userId, newConfig);
+        setConfig(newConfig);
+
+        // Recompute tiers for all local contacts and push updates
+        const updatedContacts = recomputeTiers(contacts, newConfig.tierBoundaries);
+        await Promise.all(
+          updatedContacts.map((c) => saveContactDoc(userId, c))
+        );
+      } catch (err: any) {
+        console.error('Failed to update settings:', err);
+        setError(err.message ?? 'Failed to update settings.');
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [userId, contacts]
+  );
+
+  // ── poolContacts ──────────────────────────────────────────────────────────
+  const poolContacts = useCallback(
+    async (contactIds: string[]) => {
+      if (!userId) return;
+      setIsSaving(true);
+      try {
+        const contactsToPool = contacts.filter((c) => contactIds.includes(c.id));
+        await poolContactsDocs(userId, contactsToPool);
+      } catch (err: any) {
+        console.error('Failed to pool contacts:', err);
+        setError(err.message ?? 'Failed to pool contacts.');
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [userId, contacts]
+  );
+
+  // ── depoolContacts ────────────────────────────────────────────────────────
+  const depoolContacts = useCallback(
+    async (contactIds: string[]) => {
+      if (!userId) return;
+      setIsSaving(true);
+      try {
+        await depoolContactsDocs(userId, contactIds);
+      } catch (err: any) {
+        console.error('Failed to depool contacts:', err);
+        setError(err.message ?? 'Failed to depool contacts.');
+        throw err;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [userId]
+  );
 
   return {
-    contacts: data.contacts,
-    config: data.config,
+    contacts,
+    config,
     isLoading,
     isSaving,
     error,
@@ -155,5 +327,7 @@ export function useContacts(appFolderId: string | null): UseContactsReturn {
     updateContact,
     deleteContact,
     updateConfig,
+    poolContacts,
+    depoolContacts,
   };
 }

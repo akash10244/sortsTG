@@ -1,116 +1,89 @@
 /**
  * useAuth.ts
  *
- * Hook that manages the full auth lifecycle:
- *   - Silently restores session from stored refresh token on mount
- *   - Exposes login handler (triggers Google consent popup, auth-code flow)
- *   - Exposes logout handler
- *   - Exposes the current access token for services to consume
+ * Firebase Auth integration. Manages the user session lifecycle and
+ * Google Provider credentials.
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
 import {
-  exchangeCode,
-  refreshAccessToken,
-  hasStoredSession,
-  signOut as clearTokens,
-} from '../services/authService';
-import { initGapiClient, getOrCreateAppFolder } from '../services/driveService';
-import { GOOGLE_SCOPES } from '../config';
-import type { AuthState } from '../types';
+  signInWithPopup,
+  signOut as fbSignOut,
+  onAuthStateChanged,
+  type User,
+} from 'firebase/auth';
+import { auth, googleAuthProvider } from '../services/firebaseService';
 
-interface UseAuthReturn extends AuthState {
-  appFolderId: string | null;
-  login: () => void;
-  logout: () => void;
+interface UseAuthReturn {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  userId: string | null;
+  user: User | null;
+  error: string | null;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 export function useAuth(): UseAuthReturn {
-  const [state, setState] = useState<AuthState>({
-    isAuthenticated: false,
-    isLoading: true,
-    accessToken: null,
-    error: null,
-  });
-  const [appFolderId, setAppFolderId] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // ── Connect to Drive after we have a valid access token ──────────────────
-  const connectDrive = useCallback(async (accessToken: string) => {
-    await initGapiClient(accessToken);
-    const folderId = await getOrCreateAppFolder();
-    setAppFolderId(folderId);
-    setState({
-      isAuthenticated: true,
-      isLoading: false,
-      accessToken,
-      error: null,
-    });
+  // Listen for Firebase Auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (currentUser) => {
+        setUser(currentUser);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.error('Auth state change error:', err);
+        setError(err.message ?? 'Authentication state error');
+        setIsLoading(false);
+      }
+    );
+
+    return unsubscribe;
   }, []);
 
-  // ── Silent restore on mount ───────────────────────────────────────────────
-  useEffect(() => {
-    if (!hasStoredSession()) {
-      setState(s => ({ ...s, isLoading: false }));
-      return;
+  // Login via Google Popup
+  const login = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await signInWithPopup(auth, googleAuthProvider);
+      setUser(result.user);
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message ?? 'Login failed');
+    } finally {
+      setIsLoading(false);
     }
+  }, []);
 
-    refreshAccessToken()
-      .then(tokens => connectDrive(tokens.accessToken))
-      .catch(err => {
-        console.error('Silent restore failed:', err);
-        setState({
-          isAuthenticated: false,
-          isLoading: false,
-          accessToken: null,
-          error: 'Session expired. Please sign in again.',
-        });
-      });
-  }, [connectDrive]);
-
-  // ── Login via Google auth-code flow ──────────────────────────────────────
-  const loginWithGoogle = useGoogleLogin({
-    flow: 'auth-code',
-    scope: GOOGLE_SCOPES,
-    select_account: true, // Forces the account selection screen
-    onSuccess: async ({ code }) => {
-      setState(s => ({ ...s, isLoading: true, error: null }));
-      try {
-        const tokens = await exchangeCode(code);
-        await connectDrive(tokens.accessToken);
-      } catch (err: any) {
-        setState(s => ({
-          ...s,
-          isLoading: false,
-          error: err.message ?? 'Authentication failed',
-        }));
-      }
-    },
-    onError: (err) => {
-      setState(s => ({
-        ...s,
-        isLoading: false,
-        error: (err as any).error_description ?? 'Login cancelled',
-      }));
-    },
-  });
-
-  // ── Logout ────────────────────────────────────────────────────────────────
-  const logout = useCallback(() => {
-    clearTokens();
-    setAppFolderId(null);
-    setState({
-      isAuthenticated: false,
-      isLoading: false,
-      accessToken: null,
-      error: null,
-    });
+  // Logout
+  const logout = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await fbSignOut(auth);
+      setUser(null);
+    } catch (err: any) {
+      console.error('Logout error:', err);
+      setError(err.message ?? 'Logout failed');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   return {
-    ...state,
-    appFolderId,
-    login: loginWithGoogle,
+    isAuthenticated: !!user,
+    isLoading,
+    userId: user?.uid ?? null,
+    user,
+    error,
+    login,
     logout,
   };
 }

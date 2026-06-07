@@ -7,7 +7,7 @@ import type { Contact, AppConfig, ContactType, PriceEntry, PriceType } from '../
 import { TIER_LABELS } from '../../types';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { ImageUploader, type PendingImage } from './ImageUploader';
+import { ImageUploader, type PendingImage, type ExistingImage } from './ImageUploader';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -149,7 +149,30 @@ export function ContactModal({ isOpen, onClose, contact, config, mode = 'edit', 
         <div className="form-section">
           <label className="form-label">Photos</label>
           <ImageUploader
-            existingFileIds={contact ? contact.imageFileIds.filter(id => !removedFileIds.includes(id)) : []}
+            existingImages={(() => {
+              if (!contact) return [];
+              const list: ExistingImage[] = [];
+              const kitIds = contact.imageKitIds ?? [];
+              const urls = contact.imageUrls ?? [];
+              
+              if (urls.length > 0) {
+                // Prioritize ImageKit images
+                kitIds.forEach((id, idx) => {
+                  if (!removedFileIds.includes(id)) {
+                    list.push({ id, url: urls[idx] });
+                  }
+                });
+              } else {
+                // Fallback to legacy Google Drive images
+                const driveIds = contact.imageFileIds ?? [];
+                driveIds.forEach((id) => {
+                  if (!removedFileIds.includes(id)) {
+                    list.push({ id, fileId: id });
+                  }
+                });
+              }
+              return list;
+            })()}
             onRemoveExisting={id => setRemovedFileIds(prev => [...prev, id])}
             pendingFiles={pendingImages}
             onPendingChange={setPendingImages}

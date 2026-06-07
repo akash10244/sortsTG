@@ -3,7 +3,7 @@
  */
 interface BadgeProps {
   label: string;
-  variant?: 'active' | 'inactive' | 'budget' | 'midrange' | 'premium' | 'models' | 'default';
+  variant?: 'active' | 'inactive' | 'budget' | 'midrange' | 'premium' | 'models' | 'default' | 'pooled';
   className?: string;
 }
 

@@ -1,19 +1,24 @@
 /**
- * ImageCarousel.tsx — swipeable image gallery with dot indicators and lightbox.
- * Uses DriveImage for auth-based fetching instead of public URLs.
+ * ImageCarousel.tsx — gallery with dot indicators and lightbox.
+ * Uses ContactImage to support both ImageKit URLs and legacy Drive file IDs.
  */
 import { useState } from 'react';
-import { DriveImage } from '../ui/DriveImage';
+import { ContactImage } from '../ui/ContactImage';
 import { Lightbox } from '../ui/Lightbox';
 
 interface ImageCarouselProps {
-  fileIds: string[];
+  imageUrls?: string[];
+  fileIds?: string[];
 }
 
-export function ImageCarousel({ fileIds }: ImageCarouselProps) {
+export function ImageCarousel({ imageUrls = [], fileIds = [] }: ImageCarouselProps) {
   const [current, setCurrent] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const count = fileIds.length;
+
+  const hasUrls = imageUrls.length > 0;
+  const activeUrls = hasUrls ? imageUrls : [];
+  const activeDriveIds = hasUrls ? [] : fileIds;
+  const count = activeUrls.length + activeDriveIds.length;
 
   if (count === 0) {
     return (
@@ -26,11 +31,16 @@ export function ImageCarousel({ fileIds }: ImageCarouselProps) {
   const prev = () => setCurrent(i => (i - 1 + count) % count);
   const next = () => setCurrent(i => (i + 1) % count);
 
+  const isUrl = current < activeUrls.length;
+  const currentUrl = isUrl ? activeUrls[current] : undefined;
+  const currentFileId = isUrl ? undefined : activeDriveIds[current - activeUrls.length];
+
   return (
     <>
       <div className="carousel">
-        <DriveImage
-          fileId={fileIds[current]}
+        <ContactImage
+          url={currentUrl}
+          fileId={currentFileId}
           alt={`Photo ${current + 1}`}
           className="carousel__img"
           onClick={() => setLightboxOpen(true)}
@@ -40,7 +50,7 @@ export function ImageCarousel({ fileIds }: ImageCarouselProps) {
             <button className="carousel__nav carousel__nav--prev" onClick={e => { e.stopPropagation(); prev(); }} aria-label="Previous">‹</button>
             <button className="carousel__nav carousel__nav--next" onClick={e => { e.stopPropagation(); next(); }} aria-label="Next">›</button>
             <div className="carousel__dots">
-              {fileIds.map((_, i) => (
+              {Array.from({ length: count }).map((_, i) => (
                 <button
                   key={i}
                   className={`carousel__dot ${i === current ? 'carousel__dot--active' : ''}`}
@@ -53,7 +63,12 @@ export function ImageCarousel({ fileIds }: ImageCarouselProps) {
         )}
       </div>
       {lightboxOpen && (
-        <Lightbox fileIds={fileIds} startIndex={current} onClose={() => setLightboxOpen(false)} />
+        <Lightbox
+          imageUrls={activeUrls}
+          fileIds={activeDriveIds}
+          startIndex={current}
+          onClose={() => setLightboxOpen(false)}
+        />
       )}
     </>
   );

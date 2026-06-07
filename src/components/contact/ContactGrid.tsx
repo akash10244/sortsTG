@@ -12,9 +12,21 @@ interface ContactGridProps {
   onEdit: (c: Contact) => void;
   onDelete: (c: Contact) => void;
   onView: (c: Contact) => void;
+  isSelectionMode?: boolean;
+  selectedContactIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function ContactGrid({ contacts, isSearching, onEdit, onDelete, onView }: ContactGridProps) {
+export function ContactGrid({
+  contacts,
+  isSearching,
+  onEdit,
+  onDelete,
+  onView,
+  isSelectionMode = false,
+  selectedContactIds = new Set(),
+  onToggleSelect,
+}: ContactGridProps) {
   if (contacts.length === 0) {
     return (
       <div className="empty-state">
@@ -33,7 +45,16 @@ export function ContactGrid({ contacts, isSearching, onEdit, onDelete, onView }:
         <p className="search-result-label">{contacts.length} result{contacts.length !== 1 ? 's' : ''}</p>
         <div className="card-grid">
           {contacts.map(c => (
-            <ContactCard key={c.id} contact={c} onEdit={onEdit} onDelete={onDelete} onView={onView} />
+            <ContactCard
+              key={c.id}
+              contact={c}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onView={onView}
+              isSelectionMode={isSelectionMode}
+              isSelected={selectedContactIds.has(c.id)}
+              onToggleSelect={onToggleSelect}
+            />
           ))}
         </div>
       </div>
@@ -59,6 +80,9 @@ export function ContactGrid({ contacts, isSearching, onEdit, onDelete, onView }:
           onEdit={onEdit}
           onDelete={onDelete}
           onView={onView}
+          isSelectionMode={isSelectionMode}
+          selectedContactIds={selectedContactIds}
+          onToggleSelect={onToggleSelect}
         />
       ))}
     </div>

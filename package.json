@@ -11,17 +11,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@react-oauth/google": "^0.13.4",
-    "gapi-script": "^1.2.0",
+    "@imagekit/react": "^5.0.2",
+    "firebase": "^12.14.0",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@types/gapi": "^0.0.47",
-    "@types/gapi.auth2": "^0.0.61",
-    "@types/gapi.client.drive": "^3.0.15",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

@@ -1,11 +1,16 @@
 /**
- * ImageUploader.tsx — multi-file image picker with per-file upload progress.
- * Files are not uploaded immediately; they are queued and the parent component
- * calls uploadImages() from useContacts when saving the contact form.
+ * ImageUploader.tsx — multi-file image picker with previews.
+ * Supporting both ImageKit direct CDN URLs and legacy Drive file IDs.
  */
 import { useCallback } from 'react';
-import { DriveImage, evictDriveImageCache } from '../ui/DriveImage';
+import { ContactImage } from '../ui/ContactImage';
 import { Spinner } from '../ui/Spinner';
+
+export interface ExistingImage {
+  id: string; // Unique identifier (ImageKit file ID or Google Drive file ID)
+  url?: string; // ImageKit CDN URL
+  fileId?: string; // Google Drive file ID
+}
 
 interface PendingImage {
   file: File;
@@ -13,10 +18,10 @@ interface PendingImage {
 }
 
 interface ImageUploaderProps {
-  /** Existing Drive file IDs (on edit mode) */
-  existingFileIds: string[];
+  /** Existing images (ImageKit or Drive) */
+  existingImages: ExistingImage[];
   /** Called when user removes an existing image */
-  onRemoveExisting: (fileId: string) => void;
+  onRemoveExisting: (id: string) => void;
   /** Queue of new files chosen by user */
   pendingFiles: PendingImage[];
   onPendingChange: (files: PendingImage[]) => void;
@@ -25,7 +30,7 @@ interface ImageUploaderProps {
 }
 
 export function ImageUploader({
-  existingFileIds,
+  existingImages,
   onRemoveExisting,
   pendingFiles,
   onPendingChange,
@@ -52,14 +57,14 @@ export function ImageUploader({
   return (
     <div className="image-uploader">
       {/* Existing images */}
-      {existingFileIds.map(id => (
-              <div key={id} className="image-uploader__thumb">
-          <DriveImage fileId={id} alt="Existing" className="image-uploader__thumb-img" />
+      {existingImages.map(img => (
+        <div key={img.id} className="image-uploader__thumb">
+          <ContactImage url={img.url} fileId={img.fileId} alt="Existing" className="image-uploader__thumb-img" />
           {!readOnly && (
             <button
               className="image-uploader__remove"
               type="button"
-              onClick={() => { evictDriveImageCache(id); onRemoveExisting(id); }}
+              onClick={() => onRemoveExisting(img.id)}
               aria-label="Remove image"
             >
               ✕

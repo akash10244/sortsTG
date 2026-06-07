@@ -12,9 +12,21 @@ interface TierSectionProps {
   onEdit: (c: Contact) => void;
   onDelete: (c: Contact) => void;
   onView: (c: Contact) => void;
+  isSelectionMode?: boolean;
+  selectedContactIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
 }
 
-export function TierSection({ tier, contacts, onEdit, onDelete, onView }: TierSectionProps) {
+export function TierSection({
+  tier,
+  contacts,
+  onEdit,
+  onDelete,
+  onView,
+  isSelectionMode = false,
+  selectedContactIds = new Set(),
+  onToggleSelect,
+}: TierSectionProps) {
   const [isExpanded, setIsExpanded] = useLocalStorage<boolean>(`tier-expanded-${tier}`, true);
 
   return (
@@ -45,7 +57,16 @@ export function TierSection({ tier, contacts, onEdit, onDelete, onView }: TierSe
       {isExpanded && contacts.length > 0 && (
         <div className="card-grid">
           {contacts.map(c => (
-            <ContactCard key={c.id} contact={c} onEdit={onEdit} onDelete={onDelete} onView={onView} />
+            <ContactCard
+              key={c.id}
+              contact={c}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onView={onView}
+              isSelectionMode={isSelectionMode}
+              isSelected={selectedContactIds.has(c.id)}
+              onToggleSelect={onToggleSelect}
+            />
           ))}
         </div>
       )}

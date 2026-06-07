@@ -39,9 +39,18 @@ export interface Contact {
   contactValue: string;
   location: string;
   reviewText: string;
-  /** Google Drive file IDs for images stored in the images subfolder */
+  /** Google Drive file IDs for images stored in the images subfolder (legacy) */
   imageFileIds: string[];
+  /** ImageKit CDN URLs for contact photos */
+  imageUrls?: string[];
+  /** ImageKit file IDs (needed for deletion) */
+  imageKitIds?: string[];
   isActive: boolean;
+  isPooled?: boolean;
+  ownerId?: string;
+  ownerEmail?: string;
+  ownerName?: string;
+  originalContactId?: string;
   isLessInterested?: boolean;
   didntExplorex?: boolean;
   /** One or more price+duration entries. Tier derived from min(prices.amount). */
@@ -50,6 +59,18 @@ export interface Contact {
   priceType: PriceType;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ContactRequest {
+  id: string;
+  requesterId: string;
+  requesterEmail: string;
+  ownerId: string;
+  originalContactId: string;
+  contactName: string;
+  message: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 }
 
 export interface TierBoundaries {
